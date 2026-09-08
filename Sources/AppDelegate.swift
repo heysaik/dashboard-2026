@@ -45,7 +45,7 @@ final class DashboardWindow: NSWindow {
         #endif
         let screen = NSScreen.main?.frame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         window = DashboardWindow(contentRect: screen, styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
-        window.title = "Dashboard 2026"
+        window.title = "Dashboard"
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.isReleasedWhenClosed = false
@@ -92,12 +92,12 @@ final class DashboardWindow: NSWindow {
     func buildMenus() {
         let main = NSMenu()
         let appItem = NSMenuItem()
-        let appMenu = NSMenu(title: "Dashboard 2026")
-        appMenu.addItem(withTitle: "About Dashboard 2026", action: #selector(about), keyEquivalent: "")
+        let appMenu = NSMenu(title: "Dashboard")
+        appMenu.addItem(withTitle: "About Dashboard", action: #selector(about), keyEquivalent: "")
         appMenu.addItem(withTitle: "Settings…", action: #selector(settings), keyEquivalent: ",")
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Hide Dashboard", action: #selector(dismiss), keyEquivalent: "h")
-        appMenu.addItem(withTitle: "Quit Dashboard 2026", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "Quit Dashboard", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu; main.addItem(appItem)
         let editItem = NSMenuItem(); let edit = NSMenu(title: "Edit")
         for (title, action, key) in [("Undo", Selector(("undo:")), "z"), ("Cut", #selector(NSText.cut(_:)), "x"), ("Copy", #selector(NSText.copy(_:)), "c"), ("Paste", #selector(NSText.paste(_:)), "v"), ("Select All", #selector(NSText.selectAll(_:)), "a")] { edit.addItem(withTitle: title, action: action, keyEquivalent: key) }
@@ -106,7 +106,7 @@ final class DashboardWindow: NSWindow {
         view.title = "Dashboard"; viewItem.submenu = view; main.addItem(viewItem)
         NSApp.mainMenu = main
         status = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        status.button?.image = NSImage(systemSymbolName: "gauge.with.dots.needle.50percent", accessibilityDescription: "Dashboard 2026")
+        status.button?.image = NSImage(systemSymbolName: "gauge.with.dots.needle.50percent", accessibilityDescription: "Dashboard")
         status.menu = dashboardMenu()
     }
 
@@ -120,7 +120,7 @@ final class DashboardWindow: NSWindow {
         menu.addItem(withTitle: "Position Dashboard in Spaces…", action: #selector(spaceHelp), keyEquivalent: "").target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: "Settings…", action: #selector(settings), keyEquivalent: "").target = self
-        menu.addItem(withTitle: "Quit Dashboard 2026", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "Quit Dashboard", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
         return menu
     }
 
@@ -239,7 +239,7 @@ final class DashboardWindow: NSWindow {
         alert.addButton(withTitle: "Open Mission Control"); alert.addButton(withTitle: "Done")
         if alert.runModal() == .alertFirstButtonReturn { NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Mission Control.app")) }
     }
-    @objc func about() { NSApp.orderFrontStandardAboutPanel(options: [.applicationName: "Dashboard 2026", .applicationVersion: "0.1", .credits: NSAttributedString(string: "A recreation of the classic Mac Dashboard.\nBuilt for today’s Mac. Independently made; not an Apple product.")]) }
+    @objc func about() { NSApp.orderFrontStandardAboutPanel(options: [.applicationName: "Dashboard", .applicationVersion: "0.1", .credits: NSAttributedString(string: "A recreation of the classic Mac Dashboard.\nBuilt for today’s Mac. Independently made; not an Apple product.")]) }
     func application(_ sender: NSApplication, openFiles filenames: [String]) { pendingImports += filenames.map { URL(fileURLWithPath: $0) }; bridge?.consumeImports() }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         if isTest || bridge?.loaded != true || preparingToQuit { return .terminateNow }

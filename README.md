@@ -1,4 +1,4 @@
-# Dashboard 2026
+# Dashboard
 
 Mac OS X Leopard's Dashboard, rebuilt for a current Mac: dimensional widgets, glossy controls, a metal widget shelf, preference backs, ripples, a desktop overlay, and a dedicated Space. New widgets can be generated with your local Codex, Claude Code, or LM Studio installation.
 
@@ -6,7 +6,7 @@ This is an independent recreation, using new code and artwork. It is not Apple's
 
 ## Run
 
-The installed app is `~/Applications/Dashboard 2026.app`.
+The installed app is `~/Applications/Dashboard.app`.
 
 ```sh
 ./scripts/install.sh
@@ -92,7 +92,7 @@ See [verification results](docs/Verification.md) and [design/data references](do
 ./scripts/package.sh
 ```
 
-Creates `dist/Dashboard 2026.zip` and a SHA-256 checksum. The default package is ad-hoc signed for local testing. For normal Gatekeeper behavior on other Macs, sign with a **Developer ID Application** identity and notarize:
+Creates `dist/Dashboard.zip` and a SHA-256 checksum. The default package is ad-hoc signed for local testing. For normal Gatekeeper behavior on other Macs, sign with a **Developer ID Application** identity and notarize:
 
 ```sh
 DEVELOPER_ID_APPLICATION='Developer ID Application: Your Name (TEAMID)' \

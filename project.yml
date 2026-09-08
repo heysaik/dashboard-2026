@@ -26,7 +26,8 @@ targets:
     info:
       path: Resources/Info.plist
       properties:
-        CFBundleDisplayName: Dashboard 2026
+        CFBundleDisplayName: Dashboard
+        CFBundleName: Dashboard
         CFBundleIdentifier: com.saikambampati.dashboard2026
         CFBundleShortVersionString: "0.1.0"
         CFBundleVersion: "1"
