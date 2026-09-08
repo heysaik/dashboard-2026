@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		005B4B7299C66A30D17D5B5A /* ConnectedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A4C052FC08F47964E5CAC4E /* ConnectedTests.swift */; };
 		0697E40F0A296243EEBB9F02 /* WidgetGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 164FAD73EF783F83B11F1A45 /* WidgetGenerator.swift */; };
 		127E88D8673156154970DF6F /* NativeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA0183178A4ED6DD69B3476 /* NativeBridge.swift */; };
 		2625EDEACF32B48B2A103135 /* SmokeTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CB10E9FEDC02F30D469182D /* SmokeTest.swift */; };
@@ -14,10 +15,12 @@
 		3AEE21465049322C065B0DAB /* Web in Resources */ = {isa = PBXBuildFile; fileRef = 1B5B2DD3308E78AA9C2930EF /* Web */; };
 		3D5C4EEAE423AFE7EC0C30CC /* DashboardSymbols.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33B9BC7BB81CA052FACFCBCA /* DashboardSymbols.swift */; };
 		3D7D19CE2694146BD184F21C /* SpacePinning.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2056076CEE0E5AC16ABB3894 /* SpacePinning.swift */; };
+		474B6128E8DE6798BE408578 /* WeatherService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96A2D54EC0C6D916F9FF6BE5 /* WeatherService.swift */; };
 		51BE5E35A70E71BF124CE2C6 /* LocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF6E074D3E0E4BBF77C27BF8 /* LocalStore.swift */; };
 		631EB277F208C4981293C628 /* DashboardWallpaper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9339C7C31D0B10E00BE55889 /* DashboardWallpaper.swift */; };
 		8526900FF27FADDFDD1C7ECC /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26B7886A8D876455E3D3B1BB /* AppDelegate.swift */; };
 		9CF8D325996D46C65C9296E1 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = C0855ABB4369816D5B864047 /* AppIcon.icns */; };
+		A34AB996BDEACCB23A7677C6 /* ConnectedWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6FEDE2650FB4B6AC76662E3 /* ConnectedWidget.swift */; };
 		A9E7BACE10056BE7EE68AF66 /* PrivateSpaces.m in Sources */ = {isa = PBXBuildFile; fileRef = 5C98B18DAD0DA64D8DB11F26 /* PrivateSpaces.m */; };
 		E812BC23FF1A4D5ABE55B794 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D870B407FD46A5AE85F0CF9 /* main.swift */; };
 		EE5BEFC539C1ADC05B1BE58D /* DashboardMaterials.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE08A7F3B1DBDF585F590122 /* DashboardMaterials.swift */; };
@@ -34,11 +37,14 @@
 		5C98B18DAD0DA64D8DB11F26 /* PrivateSpaces.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PrivateSpaces.m; sourceTree = "<group>"; };
 		5CB10E9FEDC02F30D469182D /* SmokeTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeTest.swift; sourceTree = "<group>"; };
 		638A3F70658A48EBD2DCA0A9 /* Dashboard-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Dashboard-Bridging-Header.h"; sourceTree = "<group>"; };
+		7A4C052FC08F47964E5CAC4E /* ConnectedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectedTests.swift; sourceTree = "<group>"; };
 		8CB3904DCA5C08A09010AE2D /* Dashboard 2026.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Dashboard 2026.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8D870B407FD46A5AE85F0CF9 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		9339C7C31D0B10E00BE55889 /* DashboardWallpaper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardWallpaper.swift; sourceTree = "<group>"; };
+		96A2D54EC0C6D916F9FF6BE5 /* WeatherService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherService.swift; sourceTree = "<group>"; };
 		9EA0183178A4ED6DD69B3476 /* NativeBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeBridge.swift; sourceTree = "<group>"; };
 		AE08A7F3B1DBDF585F590122 /* DashboardMaterials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardMaterials.swift; sourceTree = "<group>"; };
+		B6FEDE2650FB4B6AC76662E3 /* ConnectedWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectedWidget.swift; sourceTree = "<group>"; };
 		BF6E074D3E0E4BBF77C27BF8 /* LocalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStore.swift; sourceTree = "<group>"; };
 		C0855ABB4369816D5B864047 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		E7E677742441A9873D268152 /* DictionarySources.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DictionarySources.h; sourceTree = "<group>"; };
@@ -49,6 +55,8 @@
 			isa = PBXGroup;
 			children = (
 				26B7886A8D876455E3D3B1BB /* AppDelegate.swift */,
+				7A4C052FC08F47964E5CAC4E /* ConnectedTests.swift */,
+				B6FEDE2650FB4B6AC76662E3 /* ConnectedWidget.swift */,
 				638A3F70658A48EBD2DCA0A9 /* Dashboard-Bridging-Header.h */,
 				AE08A7F3B1DBDF585F590122 /* DashboardMaterials.swift */,
 				33B9BC7BB81CA052FACFCBCA /* DashboardSymbols.swift */,
@@ -62,6 +70,7 @@
 				5C98B18DAD0DA64D8DB11F26 /* PrivateSpaces.m */,
 				5CB10E9FEDC02F30D469182D /* SmokeTest.swift */,
 				2056076CEE0E5AC16ABB3894 /* SpacePinning.swift */,
+				96A2D54EC0C6D916F9FF6BE5 /* WeatherService.swift */,
 				164FAD73EF783F83B11F1A45 /* WidgetGenerator.swift */,
 			);
 			path = Sources;
@@ -165,6 +174,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				8526900FF27FADDFDD1C7ECC /* AppDelegate.swift in Sources */,
+				005B4B7299C66A30D17D5B5A /* ConnectedTests.swift in Sources */,
+				A34AB996BDEACCB23A7677C6 /* ConnectedWidget.swift in Sources */,
 				EE5BEFC539C1ADC05B1BE58D /* DashboardMaterials.swift in Sources */,
 				3D5C4EEAE423AFE7EC0C30CC /* DashboardSymbols.swift in Sources */,
 				631EB277F208C4981293C628 /* DashboardWallpaper.swift in Sources */,
@@ -174,6 +185,7 @@
 				A9E7BACE10056BE7EE68AF66 /* PrivateSpaces.m in Sources */,
 				2625EDEACF32B48B2A103135 /* SmokeTest.swift in Sources */,
 				3D7D19CE2694146BD184F21C /* SpacePinning.swift in Sources */,
+				474B6128E8DE6798BE408578 /* WeatherService.swift in Sources */,
 				0697E40F0A296243EEBB9F02 /* WidgetGenerator.swift in Sources */,
 				E812BC23FF1A4D5ABE55B794 /* main.swift in Sources */,
 			);

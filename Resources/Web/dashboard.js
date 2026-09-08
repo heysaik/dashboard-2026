@@ -7,7 +7,7 @@ const Dashboard = (() => {
   const modernSizes = { weather: [348,170], clock: [170,170], calendar: [348,170], calculator: [170,300], stickies: [170,170], dictionary: [348,170], converter: [348,170], currency: [348,170], stocks: [348,360], translation: [348,320], contacts: [348,170], tilegame: [170,190], music: [348,170], google: [348,170], business: [348,170], people: [348,170], flight: [348,170], sports: [348,360], ski: [170,360], movies: [348,360], webclip: [348,360] };
   let environment = { safeTop: 0, notchLeft: 0, notchWidth: 0, reduceMotion: false, reduceTransparency: false, increaseContrast: false, nativeGlass: false };
   let materialFrame = 0, materialUntil = 0, materialQueued = false, lastMaterialLayout = '', shelfAnimation, modalAnimation;
-  let ready = false, shelf = false, editing = false, saveTimer, saveChain = Promise.resolve(), z = 1, toastTimer, currentPreview = null, generation = false, lastFocus = null, savedLoadError = false;
+  let ready = false, shelf = false, editing = false, saveTimer, saveChain = Promise.resolve(), z = 1, toastTimer, currentPreview = null, generation = false, lastFocus = null, savedLoadError = false, previewCleanups = [];
   const native = async (action, data = {}) => {
     if (!window.webkit?.messageHandlers?.native) throw new Error('Open this dashboard in the Dashboard 2026 Mac app.');
     return await window.webkit.messageHandlers.native.postMessage({ action, data });
@@ -210,7 +210,7 @@ const Dashboard = (() => {
     const originalHeight = ctx.instance.height, originalWidth = ctx.instance.width; let resolvedCity = ctx.prefs.city;
     root.style.width = Math.max(originalWidth, 205) + 'px';
     root.style.height = Math.max(originalHeight, def.html ? 220 : 205) + 'px';
-    back.innerHTML = `<h2>${e(def.name)}</h2>${def.html ? '<p>Drag the top edge to move this widget. Its state is saved with your dashboard.</p><button class="silver-button export-widget">Export Widget…</button><button class="silver-button edit-widget">Remix with AI…</button>' : def.settings?.(ctx.prefs) || '<p>No settings for this widget.</p>'}<button class="silver-button done">Done</button>`;
+    back.innerHTML = `<h2>${e(def.name)}</h2>${def.html ? `<label>Size${ConnectedWidgets.sizes(ctx.prefs.widgetSize || def.size || 'original',def.version===1?def:null)}</label>${def.kind==='connected'?`<p>Source: ${e(new URL(def.connection.url).hostname)} · ${e(def.connection.mode==='json'?'API':def.connection.mode==='agent'?'Web research':'Website')}</p><label>Data access<select class="classic-select connection-mode"><option value="${def.connection.mode}" ${!ctx.prefs.connectionMode || ctx.prefs.connectionMode===def.connection.mode?'selected':''}>${e(def.connection.mode==='json'?'API':def.connection.mode==='agent'?'Check with agent':'Open in browser')}</option>${def.connection.mode!=='json'?`<option value="${def.connection.mode==='agent'?'browser':'agent'}" ${ctx.prefs.connectionMode && ctx.prefs.connectionMode!==def.connection.mode?'selected':''}>${def.connection.mode==='agent'?'Open in browser':'Check with agent'}</option>`:''}</select></label>`:def.version===1?'<p>Older offline widget. Remix it to add a real data connection.</p>':'<p>Offline tool. Values come from your input or its calculations.</p>'}<button class="silver-button export-widget">Export Widget…</button><button class="silver-button edit-widget">Remix with AI…</button>` : def.settings?.(ctx.prefs) || '<p>No settings for this widget.</p>'}<button class="silver-button done">Done</button>`;
     front.inert = true; back.inert = false; root.classList.add('flipped');
     syncMaterials(650);
     back.querySelector('.done').onclick = closeBack;
@@ -221,12 +221,13 @@ const Dashboard = (() => {
     });
     back.querySelector('.shuffle-tiles')?.addEventListener('click', () => { ctx.prefs.board = Core.shuffleTiles(); ctx.prefs.moves = 0; closeBack(); });
     back.querySelector('.export-widget')?.addEventListener('click', async () => { try { await native('export', def); } catch (error) { toast(error.message); } });
-    back.querySelector('.edit-widget')?.addEventListener('click', () => { closeBack(); openStudio(`Create a variation of my ${def.name} widget.\n\nCurrent widget HTML:\n${def.html}`.slice(0, 10500)); });
+    back.querySelector('.edit-widget')?.addEventListener('click', () => { closeBack(); openStudio(`Improve my ${def.name} widget. Preserve its purpose; use a real source or website when it needs external data.\n\nCurrent definition:\n${JSON.stringify(def)}`.slice(0, 10500)); });
     setTimeout(() => back.querySelector('input,select,button')?.focus(), 300);
     function closeBack() {
       const cityInput = back.querySelector('[data-setting=city]');
       if (back.querySelector('.find-city') && cityInput && cityInput.value !== resolvedCity) { back.querySelector('.location-results').textContent = 'Click Find City and choose the matching location first.'; return; }
       back.querySelectorAll('[data-setting]').forEach(element => ctx.prefs[element.dataset.setting] = element.type === 'checkbox' ? element.checked : element.value);
+      if(def.html) { ctx.prefs.widgetSize=back.querySelector('.custom-size').value; if(def.kind==='connected') { const mode=back.querySelector('.connection-mode').value; if(mode!==(ctx.prefs.connectionMode || def.connection.mode)) delete ctx.prefs.connectionSnapshot; ctx.prefs.connectionMode=mode; } }
       root.classList.remove('flipped'); front.inert = false; back.inert = true; root.style.height = originalHeight + 'px'; root.style.width = originalWidth + 'px';
       syncMaterials(650);
       save(); setTimeout(() => { if (ctx.alive()) { rerender(ctx.instance); mounted.get(ctx.instance.id)?.root.focus({ preventScroll: true }); } }, reducedMotion() ? 0 : 610);
@@ -249,8 +250,11 @@ const Dashboard = (() => {
     return bootstrap + html;
   }
   function renderCustom(ctx, def) {
+    if(def.kind==='connected') { ConnectedWidgets.render(ctx,def); return; }
     const frame = document.createElement('iframe'); frame.className = 'custom-frame'; frame.setAttribute('sandbox', 'allow-scripts'); frame.setAttribute('referrerpolicy', 'no-referrer'); frame.title = def.name; frame.srcdoc = isolatedHTML(def.html, ctx.instance.data); ctx.el.append(frame);
     ctx.on(window, 'message', event => { if (event.source !== frame.contentWindow || event.data?.type !== 'dashboard-state') return; try { const encoded = JSON.stringify(event.data.value); if (encoded.length > 200000) return; ctx.instance.data = JSON.parse(encoded); save(); } catch {} });
+    const fit=()=>{ConnectedWidgets.fit(ctx,def); if(def.version===1 && ctx.prefs.widgetSize && ctx.prefs.widgetSize!=='original') {const scale=Math.min(ctx.instance.width/def.width,ctx.instance.height/def.height); Object.assign(frame.style,{width:def.width+'px',height:def.height+'px',transform:`scale(${scale})`,transformOrigin:'top left'});} };
+    if(def.version===2 || ctx.prefs.widgetSize)fit();ctx.onTheme(fit);
   }
   function toggleShelf(value = !shelf) {
     shelf = value; shelfAnimation?.cancel();
@@ -277,7 +281,8 @@ const Dashboard = (() => {
         syncMaterials();
         ghost = document.createElement('div'); ghost.className = 'new-widget-ghost';
         ghost.style.width = width * state.settings.scale + 'px'; ghost.style.height = height * state.settings.scale + 'px';
-        if (def.html) { const frame = document.createElement('iframe'); frame.sandbox = 'allow-scripts'; frame.srcdoc = isolatedHTML(def.html, null); frame.style.cssText = `border:0;width:${def.width}px;height:${def.height}px;transform:scale(${state.settings.scale});transform-origin:top left`; ghost.append(frame); }
+        if (def.kind==='connected') { ghost.innerHTML=`<div class="connected-face"><h2>${e(def.name)}</h2><div class="connection-results">${e(new URL(def.connection.url).hostname)}</div></div>`; }
+        else if (def.html) { const frame = document.createElement('iframe'); frame.sandbox = 'allow-scripts'; frame.srcdoc = isolatedHTML(def.html, null); frame.style.cssText = `border:0;width:${def.width}px;height:${def.height}px;transform:scale(${state.settings.scale});transform-origin:top left`; ghost.append(frame); }
         else { ghost.innerHTML = `<div class="new-widget-icon">${state.settings.texture === 'liquid' ? Icons.catalog(def.id) : typeof def.icon === 'function' ? def.icon() : def.icon}<span>${e(def.name)}</span></div>`; }
         document.body.append(ghost);
       }
@@ -316,6 +321,7 @@ const Dashboard = (() => {
     setTimeout(() => modalLayer.querySelector('textarea,input,select,button')?.focus(), 100);
   }
   function closeModal() {
+    previewCleanups.forEach(clean=>clean());previewCleanups=[];
     if (generation) { toast('Generation is still running. Use Cancel to stop it.'); return; }
     modalAnimation?.cancel();
     modalLayer.hidden = true; modalLayer.innerHTML = ''; document.getElementById('dashboard').inert = false; document.body.classList.remove('dragging-new'); currentPreview = null;
@@ -341,7 +347,7 @@ const Dashboard = (() => {
   function openStudio(prompt = '') {
     if (generation) return;
     toggleShelf(false); currentPreview = null;
-    openModal('Create a Widget', `<div class="studio-layout"><div class="studio-form"><p>A little tool, made just for you. Describe your widget and give it a place on your Dashboard.</p>${providerFields()}<label for="widget-prompt">What would you like to make?<textarea id="widget-prompt" maxlength="12000" placeholder="${state.settings.texture === 'liquid' ? 'A kitchen timer with a glass dial and a soft chime when it finishes…' : 'A brass kitchen timer with a winding dial and a bell when it finishes…'}">${e(prompt)}</textarea></label><div class="studio-actions"><button id="generate" class="aqua-button">Create Widget</button><button id="cancel-generation" class="silver-button" hidden>Cancel</button></div><div id="generation-status" class="studio-progress" role="status" hidden></div><div id="generation-error" class="studio-error" role="alert" hidden></div></div><div class="studio-preview" id="preview"><div class="preview-empty">${Widgets.svg('<rect x="8" y="9" width="48" height="46" rx="9" stroke="#ccc" stroke-width="2"/><path d="M23 32h18M32 23v18" stroke="#ccc" stroke-width="2"/>')}Your widget will appear here.<br>Try it, then add it to your Dashboard.</div></div></div>`, '', '<span>Saved on this Mac. Claude Code and Codex use your account’s service; LM Studio can run locally.</span><button id="studio-import" class="silver-button">Import…</button>');
+    openModal('Create a Widget', `<div class="studio-layout"><div class="studio-form"><p>A little tool, made just for you. Describe your widget and give it a place on your Dashboard.</p>${providerFields()}<label>Widget size${ConnectedWidgets.sizes('medium')}</label><label for="widget-prompt">What would you like to make?<textarea id="widget-prompt" maxlength="12000" placeholder="${state.settings.texture === 'liquid' ? 'A kitchen timer with a glass dial and a soft chime when it finishes…' : 'A brass kitchen timer with a winding dial and a bell when it finishes…'}">${e(prompt)}</textarea></label><div class="studio-actions"><button id="generate" class="aqua-button">Create Widget</button><button id="cancel-generation" class="silver-button" hidden>Cancel</button></div><div id="generation-status" class="studio-progress" role="status" hidden></div><div id="generation-error" class="studio-error" role="alert" hidden></div></div><div class="studio-preview" id="preview"><div class="preview-empty">${Widgets.svg('<rect x="8" y="9" width="48" height="46" rx="9" stroke="#ccc" stroke-width="2"/><path d="M23 32h18M32 23v18" stroke="#ccc" stroke-width="2"/>')}Your widget will appear here.<br>Try it, then add it to your Dashboard.</div></div></div>`, '', '<span>Saved on this Mac. Claude Code and Codex use your account’s service; LM Studio can run locally.</span><button id="studio-import" class="silver-button">Import…</button>');
     wireProvider(); document.getElementById('studio-import').onclick = () => native('import').catch(error => toast(error.message));
     document.getElementById('generate').onclick = generateWidget;
     document.getElementById('cancel-generation').onclick = () => native('cancel').catch(error => toast(error.message));
@@ -351,24 +357,29 @@ const Dashboard = (() => {
     const button = document.getElementById('generate'), cancel = document.getElementById('cancel-generation'), status = document.getElementById('generation-status'), error = document.getElementById('generation-error');
     generation = true; button.disabled = true; cancel.hidden = false; status.hidden = false; error.hidden = true;
     const start = Date.now(); const timer = setInterval(() => status.innerHTML = `<span class="spinner"></span>Making your widget… ${Math.round((Date.now() - start) / 1000)}s`, 1000); status.innerHTML = '<span class="spinner"></span>Making your widget…';
-    try { const manifest = await native('generate', { prompt, theme: state.settings.texture === 'liquid' ? 'liquid' : 'leopard', ...aiSettings() }); if (!validManifest(manifest)) throw new Error('The model returned an invalid widget. Try again.'); currentPreview = manifest; showPreview(manifest); status.innerHTML = 'Your widget is ready. Try it in the preview.'; syncMaterials(300); }
+    try { const manifest = await native('generate', { prompt, size: document.querySelector('.studio-form .custom-size').value, theme: state.settings.texture === 'liquid' ? 'liquid' : 'leopard', ...aiSettings() }); if (!validManifest(manifest)) throw new Error('The model returned an invalid widget. Try again.'); currentPreview = {...manifest,id:'custom-'+crypto.randomUUID()}; showPreview(currentPreview); status.innerHTML = 'Your widget is ready. Try it in the preview.'; syncMaterials(300); }
     catch (reason) { error.textContent = reason.message; error.hidden = false; status.hidden = true; }
     finally { generation = false; clearInterval(timer); button.disabled = false; button.textContent = 'Create Again'; cancel.hidden = true; }
   }
   function showPreview(manifest) {
+    previewCleanups.forEach(clean=>clean()); previewCleanups=[];
     const preview = document.getElementById('preview'); if (!preview) return;
-    const scale = Math.min(1, 270 / manifest.width, 310 / manifest.height);
-    preview.innerHTML = `<div class="preview-render" style="width:${manifest.width * scale}px;height:${manifest.height * scale}px"><iframe title="${e(manifest.name)} preview" sandbox="allow-scripts" referrerpolicy="no-referrer" style="width:${manifest.width}px;height:${manifest.height}px;transform:scale(${scale})"></iframe></div><div class="preview-actions"><button class="aqua-button" id="add-generated">Add to Dashboard</button><button class="silver-button" id="drag-generated">Drag to Place</button></div><div class="preview-caption">${e(manifest.name)} · ${manifest.width} × ${manifest.height}</div>`;
-    preview.querySelector('iframe').srcdoc = isolatedHTML(manifest.html, null);
+    const scale = Math.min(1, 320 / manifest.width, 360 / manifest.height);
+    preview.innerHTML = `<div class="preview-render" style="width:${manifest.width*scale}px;height:${manifest.height*scale}px"><div class="connection-preview" style="width:${manifest.width}px;height:${manifest.height}px;transform:scale(${scale});transform-origin:top left"></div></div><div class="preview-size">${ConnectedWidgets.sizes(manifest.size || 'original',manifest.version===1?manifest:null)}</div><div class="preview-actions"><button class="aqua-button" id="add-generated">Add to Dashboard</button><button class="silver-button" id="drag-generated">Drag to Place</button></div><div class="preview-caption">${e(manifest.name)} · ${manifest.width} × ${manifest.height}</div>`;
+    const root=preview.querySelector('.connection-preview');
+    if(manifest.kind==='connected') {
+      const ctx={root,el:root,prefs:{},instance:{id:'preview-'+manifest.id},cleanups:previewCleanups,save:()=>{},alive:()=>root.isConnected,resize:(w,h)=>Object.assign(root.style,{width:w+'px',height:h+'px'}),onTheme:()=>{},interval:()=>{}};
+      ConnectedWidgets.render(ctx,manifest);
+    } else {const frame=document.createElement('iframe');frame.title=manifest.name+' preview';frame.sandbox='allow-scripts';frame.referrerPolicy='no-referrer';frame.style.cssText='width:100%;height:100%;border:0';frame.srcdoc=isolatedHTML(manifest.html,null);root.append(frame);}
+    preview.querySelector('.custom-size').onchange=event=>{const size=event.target.value,dimensions=Core.widgetSizes[size]||[manifest.width,manifest.height];currentPreview={...manifest,size:size==='original'?undefined:size,width:dimensions[0],height:dimensions[1]};showPreview(currentPreview);};
     document.getElementById('add-generated').onclick = () => installPreview();
-    const drag = document.getElementById('drag-generated');
-    drag.onpointerdown = event => dragNewWidget(event, manifest, installPreview);
+    document.getElementById('drag-generated').onpointerdown = event => dragNewWidget(event, manifest, installPreview);
   }
   function installPreview(x, y) {
     if (!validManifest(currentPreview)) return;
-    const def = { ...currentPreview, id: 'custom-' + crypto.randomUUID(), icon: Widgets.box('✦') }; state.custom.push(def); closeModal(); const result = add(def.id, x, y); toast(`${def.name} added to Dashboard.`); return result;
+    const def = { ...currentPreview, id: currentPreview.id || 'custom-' + crypto.randomUUID(), icon: Widgets.box('✦') }; state.custom.push(def); closeModal(); const result = add(def.id, x, y); toast(`${def.name} added to Dashboard.`); return result;
   }
-  function previewImport(manifest) { if (!validManifest(manifest)) { toast('This is not a valid Dashboard widget.'); return; } if (generation) { toast('Finish the current generation before importing.'); return; } openStudio(); currentPreview = manifest; showPreview(manifest); }
+  function previewImport(manifest) { if (!validManifest(manifest)) { toast('This is not a valid Dashboard widget.'); return; } if (generation) { toast('Finish the current generation before importing.'); return; } openStudio(); currentPreview = {...manifest,id:'custom-'+crypto.randomUUID()}; showPreview(currentPreview); }
   async function openSettings() {
     if (generation) return;
     openModal('Dashboard Settings', `<div class="settings-form"><h2>Appearance</h2><div class="theme-picker" role="radiogroup" aria-label="Theme"><button type="button" class="theme-choice" role="radio" data-theme-choice="leopard"><strong>Leopard</strong></button><button type="button" class="theme-choice" role="radio" data-theme-choice="liquid"><strong>macOS 27 · Liquid Glass</strong></button></div><label id="classic-background">Classic background<select id="texture">${[['leopard', 'Leopard — your desktop'], ['rubber', 'Lion — dark rubber'], ['linen', 'Gray linen']].map(([id, label]) => Widgets.option(id, state.settings.texture, label)).join('')}</select></label><label>Widget size<select id="scale">${[['0.85', 'Small (85%)'], ['1', 'Original (100%)'], ['1.2', 'Large (120%)'], ['1.4', 'Extra Large (140%)']].map(([id, label]) => Widgets.option(id, String(state.settings.scale), label)).join('')}</select></label><label class="checkbox"><input id="reduce-motion" type="checkbox" ${state.settings.reducedMotion ? 'checked' : ''}>Reduce animation</label><hr><h2>Desktop & Spaces</h2><div class="setting-row"><button id="mode-space" class="silver-button">Use as a Space</button><button id="mode-overlay" class="silver-button">Use as an Overlay</button></div><button id="pin-space" class="silver-button">Pin Dashboard to the Left</button><p id="space-status">⌃⌥D opens Dashboard from any Space. Esc returns to your previous app.</p><label class="checkbox"><input id="login" type="checkbox">Open Dashboard at login</label><hr><h2>Widget creation</h2>${providerFields()}<label>LM Studio server<input id="lm-endpoint" type="text" value="${e(state.settings.endpoint)}"></label><p>Start the local server and load a model in LM Studio to use it here.</p><hr><button id="data-folder" class="silver-button">Show Saved Dashboard…</button></div>`, 'settings-dialog');
@@ -405,6 +416,12 @@ const Dashboard = (() => {
       if (saved) {
         if (saved.version !== 1 || !Array.isArray(saved.widgets)) throw new Error('The saved layout is not a supported version. Your original file has been preserved.');
         state = { ...state, ...saved, settings: { ...state.settings, ...saved.settings }, custom: (saved.custom || []).filter(validManifest) };
+        for(const def of state.custom) {
+          if(def.version===1 && /fandango/i.test(def.name) && /Save Ticket Plan/.test(def.html)) {
+            await native('archiveWidget',def); const id=def.id; Object.assign(def,structuredClone(ConnectedWidgets.fandango),{id});
+            for(const instance of state.widgets.filter(w=>w.type===id)){instance.width=348;instance.height=170;(instance.prefs ||= {}).widgetSize='medium';delete instance.layouts;}
+          }
+        }
         state.widgets = state.widgets.filter(instance => definition(instance.type) && typeof instance.id === 'string').slice(0, 150);
         for (const instance of state.widgets) { const def = definition(instance.type); if (!Number.isFinite(instance.x)) instance.x = 70; if (!Number.isFinite(instance.y)) instance.y = 70; instance.width = clamp(Number(instance.width) || def.width, 140, 800); instance.height = clamp(Number(instance.height) || def.height, 35, 700); }
         state.settings.scale = clamp(Number(state.settings.scale) || 1, .75, 1.5); if (!Array.isArray(state.settings.disabled)) state.settings.disabled = [];
@@ -489,9 +506,9 @@ const Dashboard = (() => {
     const weather = widget('weather'), weatherToggle = weather.el.querySelector('.weather-top');
     if (!weatherToggle) throw new Error('Weather unavailable during interaction verification');
     weatherToggle.click(); await settle();
-    assert('weather forecast collapses', weather.instance.height === 90 && weather.prefs.expanded === false);
+    assert('weather forecast collapses', weather.instance.height === 108 && weather.prefs.expanded === false);
     weather.el.querySelector('.weather-top').dispatchEvent(new KeyboardEvent('keydown',{key:' ',bubbles:true})); await settle();
-    assert('weather forecast expands with keyboard', weather.instance.height === 150 && weather.prefs.expanded === true);
+    assert('weather forecast expands with keyboard', weather.instance.height === 168 && weather.prefs.expanded === true);
     calcRoot.dispatchEvent(new KeyboardEvent('keydown',{key:'c',metaKey:true,bubbles:true}));
     assert('Command-C does not clear calculator',calcRoot.querySelector('output').textContent === '56');
     const copied = new DataTransfer(); calcRoot.dispatchEvent(new ClipboardEvent('copy',{clipboardData:copied,bubbles:true,cancelable:true}));
@@ -581,6 +598,39 @@ const Dashboard = (() => {
     assert('accessibility display preferences propagate', document.body.classList.contains('reduce-transparency') && document.body.classList.contains('increase-contrast') && reducedMotion());
     assert('reduced motion skips Web Animations', animate(calcRoot, [{ opacity: 0 }, { opacity: 1 }]) === null);
     remove(notchTest.id); remove(sideTest.id); setEnvironment(actualEnvironment); setTheme(originalTheme);
+    const tickets={...structuredClone(ConnectedWidgets.fandango),id:'smoke-tickets'};
+    state.custom.push(tickets); const ticketInstance=add(tickets.id,50,100);
+    let ticket=mounted.get(ticketInstance.id);
+    assert('connected widgets use host rendering and have no executable iframe',!!ticket.el.querySelector('.connected-face') && !ticket.el.querySelector('iframe'));
+    assert('ticket widget starts without fabricated prices or bookings',!ticket.el.textContent.includes('$') && ticket.el.textContent.includes('website'));
+    const input=ticket.el.querySelector('[data-parameter="zip"]');input.value='94103';input.dispatchEvent(new Event('input'));
+    const originalOpen=api.open;let opened='';api.open=url=>{opened=url;};ticket.el.querySelector('.connection-open').click();api.open=originalOpen;
+    assert('Fandango action carries the actual ZIP and date to its real website',new URL(opened).pathname==='/94103_movietimes' && new URL(opened).searchParams.has('date'));
+    for(const theme of ['leopard','liquid']) {
+      setTheme(theme);
+      for(const [size,[width,height]] of Object.entries(Core.widgetSizes)) {
+        ticketInstance.prefs.widgetSize=size;rerender(ticketInstance);ticket=mounted.get(ticketInstance.id);
+        assert(`${theme} connected ${size} uses its selected dimensions`,ticketInstance.width===width && ticketInstance.height===height);
+        const bounds=ticket.el.querySelector('.connected-face').getBoundingClientRect(), button=ticket.el.querySelector('.connection-open').getBoundingClientRect();
+        assert(`${theme} connected ${size} keeps actions inside the widget`,button.bottom<=bounds.bottom && button.right<=bounds.right && button.top>=bounds.top);
+        assert(`${theme} connected ${size} retains every input`,[...ticket.el.querySelectorAll('[data-parameter]')].every(el=>getComputedStyle(el.parentElement).display!=='none') && ticket.prefs.connectionValues.zip==='94103');
+      }
+    }
+    ticket.flip();await settle();ticket.root.querySelector('.custom-size').value='small';ticket.root.querySelector('.done').click();await new Promise(r=>setTimeout(r,680));
+    assert('widget size selector persists the chosen size',ticketInstance.prefs.widgetSize==='small' && ticketInstance.width===170);
+    remove(ticketInstance.id);state.custom=state.custom.filter(d=>d.id!==tickets.id);setTheme(originalTheme);
+    const originalNative=api.native;
+    try {
+      api.native=(action,data)=>action==='fetch'?Promise.resolve({}):originalNative(action,data);
+      Object.assign(widget('currency').prefs,{from:'EUR',to:'USD'});
+      for(const type of ['ski','sports','currency','movies'])rerender(widget(type).instance);
+      widget('movies').el.querySelector('input').value='Example';widget('movies').el.querySelector('form').dispatchEvent(new Event('submit',{cancelable:true}));
+      await new Promise(r=>setTimeout(r,100));
+      assert('missing snowfall is unavailable rather than zero',widget('ski').el.querySelector('.ski-temp').textContent==='—°' && widget('ski').el.textContent.includes('incomplete data') && !widget('ski').el.textContent.includes('0.0 cm'));
+      assert('incomplete scoreboard is not reported as no scheduled games',widget('sports').el.textContent.includes('incomplete data'));
+      assert('incomplete movie feed is not reported as no matches',widget('movies').el.textContent.includes('incomplete data'));
+      assert('missing exchange rate clears the converted amount',widget('currency').el.querySelector('.result').value==='' && widget('currency').el.textContent.includes('incomplete data'));
+    } finally {api.native=originalNative;}
     return results;
   }
   const api = { native, aiSettings, toast, open, toggleShelf, openStudio, openSettings, previewImport, flushSave, runSmokeTests, add, remove, setEnvironment, setTheme, reducedMotion, animate, get ready() { return ready; }, get state() { return state; } };

@@ -43,7 +43,7 @@ A Dashboard Space covers the full display, including the strip beside a MacBook'
 
 | Widget | Behavior |
 | --- | --- |
-| Weather | Click conditions to expand/collapse the six-day forecast; city search, °C / °F, optional forecast lows |
+| Weather | Nearby NWS observations in the US with station/update time; labelled Open-Meteo fallback and six-day forecast; city search, °C / °F, optional lows |
 | World Clock | Analog clock, seconds hand, day/night case, selectable cities |
 | iCal | Click the date to slide between a square date tile and full month; day selection, month arrows, return to today |
 | Calculator | Arithmetic, memory, keyboard input, copy/paste, repeated equals; saved display |
@@ -71,7 +71,7 @@ Manage Widgets controls which definitions appear in the shelf. All widgets suppo
 
 ## AI widgets
 
-Select a provider, describe a tool, try the preview, then add it or drag it onto the dashboard. A verified Codex-generated example is included at [Examples/Brass Mechanical Counter.dashboardwidget](Examples/Brass%20Mechanical%20Counter.dashboardwidget).
+Select a provider and Small, Medium or Large, describe a widget, try the preview, then add it or drag it onto the dashboard. Connected widgets use real JSON APIs, source-verified Codex/Claude web excerpts, or a browser handoff for actions such as ticket checkout. API keys are entered through a native prompt and stored in Keychain. Missing data displays an error instead of invented values. A verified Codex-generated example is included at [Examples/Brass Mechanical Counter.dashboardwidget](Examples/Brass%20Mechanical%20Counter.dashboardwidget).
 
 Codex and Claude Code use their existing local authentication and their account's service. LM Studio uses a loopback OpenAI-compatible endpoint; start its server and load a model first. The app has **no App Sandbox**, while generated HTML runs in an isolated WebKit frame with a constrained state API. See [widget format and provider details](docs/WidgetFormat.md).
 
@@ -84,6 +84,7 @@ node --test Tests/core.test.cjs
 ./scripts/test.sh                  # native WebKit integration, isolated data directory
 ./scripts/test.sh --test-space     # also creates and checks a temporary full-screen Space
 ./scripts/test.sh --test-ai        # makes a real generation request through Codex
+./scripts/test.sh --test-connected # real JSON, Weather, generation and Codex/Claude web checks
 ```
 
 See [verification results](docs/Verification.md) and [design/data references](docs/References.md).

@@ -1,0 +1,31 @@
+{
+  "height": 170,
+  "size": "medium",
+  "html": "<!doctype html><html></html>",
+  "connection": {
+    "fields": [],
+    "mode": "browser",
+    "query": "Open real Fandango showtimes near the specified ZIP code for the selected date so the user can choose a movie, theater, and showtime and complete ticket checkout on Fandango.",
+    "url": "https://www.fandango.com/{zip}_movietimes?date={date}",
+    "parameters": [
+      {
+        "type": "text",
+        "label": "ZIP code",
+        "value": "",
+        "id": "zip"
+      },
+      {
+        "type": "date",
+        "label": "Show date",
+        "value": "today",
+        "id": "date"
+      }
+    ],
+    "actionLabel": "Find tickets",
+    "itemsPath": ""
+  },
+  "kind": "connected",
+  "width": 348,
+  "name": "Fandango Tickets",
+  "version": 2
+}

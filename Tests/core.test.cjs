@@ -57,3 +57,32 @@ test('import validation rejects malformed widget dimensions and payloads', () =>
   assert.equal(validManifest(widget), true);
   for (const patch of [{ width: Infinity }, { height: 1 }, { version: 2 }, { name: ' ' }, { html: '' }, { width: '220' }]) assert.equal(validManifest({ ...widget, ...patch }), false);
 });
+
+const { validConnection, widgetSizes, connectionURL, pathValue, dataRows, weatherDescription } = require('../Resources/Web/core.js');
+const connection = {mode:'json',url:'https://example.com/data?q={query}',query:'Current records',itemsPath:'records',fields:[{label:'Price',path:'price'}],parameters:[{id:'query',label:'Query',type:'text',value:''}],auth:null,actionLabel:'Open source'};
+test('connected manifests enforce all three sizes and require a source', () => {
+  for(const [size,[width,height]] of Object.entries(widgetSizes)) {
+    const manifest={version:2,name:'Data',kind:'connected',size,width,height,html:'<html></html>',connection};
+    assert.equal(validManifest(manifest),true);
+    for(const patch of [{width:480,height:600},{connection:null},{size:'huge'},{kind:'tool'}]) assert.equal(validManifest({...manifest,...patch}),false);
+  }
+});
+test('connection inputs cannot change origin or inject query parameters', () => {
+  const url=new URL(connectionURL(connection,{query:'a&token=secret/#?'}));
+  assert.equal(url.origin,'https://example.com'); assert.equal(url.searchParams.get('q'),'a&token=secret/#?');assert.equal(url.searchParams.size,1);
+  assert.throws(()=>connectionURL({...connection,url:'https://example.com/{unknown}'}));
+  for(const url of ['file:///etc/passwd','http://example.com','https://u:p@example.com','https://{query}/']) assert.equal(validConnection({...connection,url}),false);
+  assert.equal(validConnection({...connection,parameters:[...connection.parameters,...connection.parameters]}),false);
+  assert.equal(validConnection({...connection,auth:{placement:'header',name:'Host',prefix:'',helpURL:''}}),false);
+});
+test('data mapping preserves real zeros and rejects missing fields rather than fabricating values', () => {
+  assert.deepEqual(dataRows({records:[{price:0},{price:19.5}]},connection),[[{label:'Price',value:'0'}],[{label:'Price',value:'19.5'}]]);
+  for(const payload of [{},{records:[{}]},{records:[{price:null}]}]) assert.throws(()=>dataRows(payload,connection));
+  assert.deepEqual(dataRows({records:[]},connection),[]);
+  assert.equal(pathValue({values:[{ok:false}]},'values[0].ok'),false);
+  for(const path of ['constructor','__proto__','toString','values.__proto__']) assert.equal(pathValue({values:[]},path),undefined);
+});
+test('weather codes distinguish fog, freezing rain, snow and unavailable conditions', () => {
+  assert.equal(weatherDescription(45),'Fog');assert.equal(weatherDescription(67),'Freezing rain');assert.equal(weatherDescription(85),'Snow');
+  assert.equal(weatherDescription(0,false),'Clear');assert.equal(weatherDescription(null),'Conditions unavailable');assert.equal(weatherDescription(123),'Conditions unavailable');
+});

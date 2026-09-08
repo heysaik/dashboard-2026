@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "name": "Downtown SF station",
+  "kind": "connected",
+  "size": "medium",
+  "width": 348,
+  "height": 170,
+  "html": "<!doctype html><html></html>",
+  "connection": {
+    "mode": "json",
+    "url": "https://api.weather.gov/stations/SFOC1/observations/latest",
+    "query": "Observed weather",
+    "itemsPath": "properties",
+    "fields": [
+      {
+        "label": "Temperature \u00b0C",
+        "path": "temperature.value"
+      },
+      {
+        "label": "Observed",
+        "path": "timestamp"
+      }
+    ],
+    "parameters": [],
+    "auth": null,
+    "actionLabel": "Open source"
+  }
+}

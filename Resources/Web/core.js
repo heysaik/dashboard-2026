@@ -60,8 +60,52 @@
     for (let i = 0; i < 180; i++) { const choices = [hole - 4, hole + 4, ...(hole % 4 ? [hole - 1] : []), ...(hole % 4 < 3 ? [hole + 1] : [])].filter(n => n >= 0 && n < 16 && n !== previous); const next = choices[Math.floor(random() * choices.length)]; [board[hole], board[next]] = [board[next], board[hole]]; previous = hole; hole = next; }
     return board;
   }
-  function validManifest(value) { return value && value.version === 1 && typeof value.name === 'string' && value.name.trim().length > 0 && value.name.length <= 80 && Number.isInteger(value.width) && value.width >= 140 && value.width <= 800 && Number.isInteger(value.height) && value.height >= 100 && value.height <= 700 && typeof value.html === 'string' && value.html.length > 0 && new TextEncoder().encode(value.html).length <= 1000000; }
-  const core = { clamp, escape, Calculator, units, convert, calendarCells, shuffleTiles, validManifest };
+  const widgetSizes = {small:[170,170],medium:[348,170],large:[348,360]};
+  function weatherDescription(code,day=true) {
+    if(code==null)return 'Conditions unavailable';
+    if(code===0)return day?'Sunny':'Clear';
+    if(code===1)return day?'Mostly sunny':'Mostly clear';
+    if(code===2)return 'Partly cloudy';if(code===3)return 'Overcast';
+    if([45,48].includes(code))return 'Fog';
+    if([51,53,55].includes(code))return 'Drizzle';if([56,57].includes(code))return 'Freezing drizzle';
+    if([61,63,65,80,81,82].includes(code))return 'Rain';if([66,67].includes(code))return 'Freezing rain';
+    if([71,73,75,77,85,86].includes(code))return 'Snow';if([95,96,99].includes(code))return 'Thunderstorms';
+    return 'Conditions unavailable';
+  }
+  function validConnection(c) {
+    try {
+      const url = new URL(c.url);
+      return ['json','agent','browser'].includes(c.mode) && url.protocol === 'https:' && !url.username && !url.password && !url.hostname.includes('{') && c.url.length < 2000 && typeof c.query === 'string' && c.query.length < 3000 && typeof c.itemsPath === 'string' && typeof c.actionLabel === 'string' && c.actionLabel.length <= 60 && Array.isArray(c.fields) && c.fields.length <= 6 && c.fields.every(f=>typeof f.label==='string' && f.label.length<=60 && typeof f.path==='string' && f.path.length<=150) && Array.isArray(c.parameters) && c.parameters.length<=4 && new Set(c.parameters.map(p=>p.id)).size===c.parameters.length && c.parameters.every(p=>/^[a-zA-Z][a-zA-Z0-9_]{0,30}$/.test(p.id) && ['text','date','number'].includes(p.type) && typeof p.label==='string' && p.label.length<=60 && typeof p.value==='string' && p.value.length<=256) && (!c.auth || (c.mode==='json' && ['header','query'].includes(c.auth.placement) && /^[a-zA-Z0-9_-]{1,60}$/.test(c.auth.name) && !['host','cookie','referer'].includes(c.auth.name.toLowerCase()) && typeof c.auth.prefix==='string' && c.auth.prefix.length<=30 && !/[\r\n]/.test(c.auth.prefix)));
+    } catch { return false; }
+  }
+  function connectionURL(c, values={}) {
+    if(!validConnection(c)) throw new Error('This widget needs a valid data connection.');
+    const value=c.url.replace(/\{([a-zA-Z][a-zA-Z0-9_]*)\}/g,(_,id)=>{ const p=c.parameters.find(p=>p.id===id); if(!p)throw new Error('Unknown connection input.'); return encodeURIComponent(String(values[id]??p.value).slice(0,256)); });
+    if(value.includes('{')) throw new Error('Unknown connection input.');
+    const url=new URL(value); if(url.protocol!=='https:' || url.hostname!==new URL(c.url).hostname) throw new Error('Invalid source URL.'); return url.href;
+  }
+  function pathValue(object,path) {
+    if(path === '') return object;
+    const keys=path.replace(/\[(\d+)\]/g,'.$1').split('.');
+    if(keys.some(k=>!k || ['__proto__','prototype','constructor'].includes(k))) return undefined;
+    return keys.reduce((value,key)=>value!==null && typeof value==='object' && Object.hasOwn(value,key)?value[key]:undefined,object);
+  }
+  function dataRows(payload, connection) {
+    const collection=pathValue(payload,connection.itemsPath);
+    if(collection===undefined || collection===null) throw new Error(`The source is missing ${connection.itemsPath || 'its data'}. Check the connection.`);
+    const items=Array.isArray(collection)?collection.slice(0,30):[collection];
+    return items.map(item=>connection.fields.length?connection.fields.map(field=>{
+      const value=pathValue(item,field.path);
+      if(value===undefined || value===null) throw new Error(`The source did not provide ${field.label || field.path}.`);
+      return {label:field.label,value:typeof value==='object'?JSON.stringify(value):String(value)};
+    }):[{label:'',value:typeof item==='object'?JSON.stringify(item,null,2):String(item)}]);
+  }
+  function validManifest(value) {
+    const base = value && [1,2].includes(value.version) && typeof value.name === 'string' && value.name.trim().length > 0 && value.name.length <= 80 && Number.isInteger(value.width) && value.width >= 140 && value.width <= 800 && Number.isInteger(value.height) && value.height >= 100 && value.height <= 700 && typeof value.html === 'string' && value.html.length > 0 && new TextEncoder().encode(value.html).length <= 1000000;
+    if(!base || value.version===1) return !!base;
+    return !!widgetSizes[value.size] && value.width===widgetSizes[value.size][0] && value.height===widgetSizes[value.size][1] && ['tool','connected'].includes(value.kind) && (value.kind==='connected'?validConnection(value.connection):value.connection==null);
+  }
+  const core = { clamp, escape, Calculator, units, convert, calendarCells, shuffleTiles, validManifest, widgetSizes, validConnection, connectionURL, pathValue, dataRows, weatherDescription };
   if (typeof module !== 'undefined') module.exports = core;
   root.Core = core;
 })(typeof globalThis === 'undefined' ? this : globalThis);

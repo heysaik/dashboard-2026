@@ -1,0 +1,55 @@
+.connected-face { height:100%; display:flex; flex-direction:column; gap:8px; padding:14px 15px 12px; border:1px solid #8c9297; border-radius:12px; background:linear-gradient(#f3f3f0,#d0d3d5); color:#25292c; box-shadow:inset 0 1px #fff; container-type:inline-size; }
+.connected-face h2 { margin:0; font:600 16px/20px -apple-system,sans-serif; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.connection-inputs { display:flex; gap:9px; margin:0; }
+.connection-inputs label { flex:1; min-width:0; display:flex; align-items:center; gap:5px; font-size:11px; }
+.connection-inputs input { width:100%; min-width:0; height:26px; border:1px solid #999; border-radius:6px; background:#fff; color:#20252a; padding:3px 6px; font-size:12px; }
+.connection-results { flex:1; min-height:0; overflow:auto; font:12px/1.4 -apple-system,sans-serif; user-select:text; -webkit-user-select:text; }
+.connection-actions { display:flex; align-items:center; gap:6px; }
+.connection-actions button { font-size:11px; min-height:25px; padding:3px 9px; }
+.connection-open { margin-left:auto; }
+.connection-status { font:10px/13px -apple-system,sans-serif; color:#4b5053; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
+.connection-record + .connection-record { margin-top:9px; padding-top:7px; border-top:1px solid #80808040; }
+.connection-value { display:flex; align-items:baseline; gap:12px; justify-content:space-between; }
+.connection-value strong { font-weight:500; white-space:pre-wrap; overflow-wrap:anywhere; }
+.connection-value span { color:#535a60; flex-shrink:0; }
+.source-excerpt { display:block; padding:5px 0 8px; text-align:left; font:inherit; background:none; color:inherit; border:0; border-bottom:1px solid #80808040; width:100%; }
+.source-excerpt small { display:block; margin-top:4px; opacity:.8; }
+.connection-preview { text-align:left; }
+.preview-size { margin-top:12px; }
+.custom-size { height:28px; max-width:100%; }
+.weather-source { position:absolute; left:9px; right:32px; bottom:4px; padding:0; background:none; border:0; color:#edf4ff; font:10px/13px -apple-system,sans-serif; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.weather-art:empty { display:none; }
+.liquid .weather-source { left:18px; right:29px; bottom:7px; color:white; }
+.liquid .weather-top { bottom:32px; }
+.liquid .weather-face .forecast { bottom:30px; }
+.liquid .weather-condition.observed { left:0; }
+.liquid .connected-face { padding:16px; border:1px solid #ffffff29; border-radius:22px; color:#fff; background:transparent; box-shadow:none; }
+.liquid:not(.native-glass) .connected-face { background:#3a424abf; backdrop-filter:blur(24px); }
+.liquid .connection-status,.liquid .connection-value span { color:#ffffffd9; }
+.liquid .connection-inputs input { background:#ffffff17; color:#fff; border:1px solid #ffffff40; }
+.liquid .connected-face .silver-button { color:#fff; background:#ffffff24; border:1px solid #ffffff30; border-radius:7px; box-shadow:none; text-shadow:none; }
+.liquid.reduce-transparency .connected-face,.liquid.increase-contrast .connected-face { background:#343c46; }
+@container (max-width:190px) {
+  .connection-inputs { flex-direction:column; flex-shrink:0; max-height:50px; overflow-y:auto; gap:4px; }
+  .connection-inputs label { flex:none; font-size:10px; }
+  .connection-inputs input { height:23px; flex:1; }
+  .connection-results { font-size:11px; }
+  .connection-actions { flex-wrap:wrap; gap:4px; }
+  .connection-refresh { font-size:0!important; padding:3px 6px!important; }
+  .connection-refresh::after { content:'↻'; font-size:16px; }
+  .connection-actions button { padding:3px 6px; }
+  .connection-open { margin-left:0; flex:1; }
+  .connection-status { font-size:9px; }
+}
+
+[data-widget-size="small"] .connected-face { padding:11px; gap:5px; }
+[data-widget-size="small"] .connected-face h2 { font-size:14px; line-height:18px; }
+.connection-inputs:empty { display:none; }
+
+.connection-browser .connection-inputs label { display:block; }
+.connection-browser .connection-inputs input { display:block; margin-top:3px; }
+[data-widget-size="medium"] .connection-browser .connection-results,
+[data-widget-size="small"] .connection-browser .connection-results { display:none; }
+.connection-browser .connection-actions { margin-top:auto; }
+[data-widget-size="small"] .connection-browser .connection-inputs label { display:flex; }
+[data-widget-size="small"] .connection-browser .connection-inputs input { margin-top:0; }

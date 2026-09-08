@@ -32,10 +32,20 @@ struct WidgetManifest: Codable {
     let width: Int
     let height: Int
     let html: String
+    var kind: String? = nil
+    var size: String? = nil
+    var connection: WidgetConnection? = nil
     func validate() throws {
-        guard version == 1, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, name.count <= 80,
+        guard [1, 2].contains(version), !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, name.count <= 80,
               (140...800).contains(width), (100...700).contains(height), !html.isEmpty, html.utf8.count <= 1_000_000 else {
-            throw DashboardError.message("Widget needs version 1, a name, width 140–800, height 100–700, and HTML under 1 MB.")
+            throw DashboardError.message("Widget needs version 1 or 2, a name, width 140–800, height 100–700, and HTML under 1 MB.")
+        }
+        if version == 2 {
+            guard ["small", "medium", "large"].contains(size ?? ""), ["tool", "connected"].contains(kind ?? "") else { throw DashboardError.message("Choose a widget size and a working connection or offline tool.") }
+            let dimensions = ["small": (170, 170), "medium": (348, 170), "large": (348, 360)][size!]!
+            guard width == dimensions.0, height == dimensions.1 else { throw DashboardError.message("The widget dimensions do not match its selected size.") }
+            if kind == "connected" { guard let connection else { throw DashboardError.message("This widget needs a data source.") }; try connection.validate() }
+            else if connection != nil { throw DashboardError.message("Offline widgets cannot declare a hidden connection.") }
         }
     }
     static func parse(_ text: String) throws -> WidgetManifest {

@@ -11,6 +11,8 @@ import WebKit
     let generator = WidgetGenerator()
     var loaded = false
     let network = NetworkService()
+    let connected = ConnectedDataService()
+    lazy var weather = WeatherService(network: network)
     init(app: AppDelegate) throws { self.app = app; self.store = try LocalStore(); super.init() }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping (Any?, String?) -> Void) {
@@ -29,6 +31,18 @@ import WebKit
         case "materials": app.materials.update(data); return true
         case "save": try store.write(data); return true
         case "fetch": return try await network.fetch(data["url"] as? String ?? "")
+        case "weather": return try await weather.forecast(data)
+        case "connectedFetch", "connectedKey":
+            let connection = try JSONDecoder().decode(WidgetConnection.self, from: JSONSerialization.data(withJSONObject: data["connection"] ?? [:]))
+            let id = data["id"] as? String ?? "preview"
+            if action == "connectedKey" { guard !app.isTest else { throw DashboardError.message("Keychain prompts are disabled in tests.") }; return try connected.credentials.configure(id, connection) }
+            return try await connected.read(id: id, credentialID: data["credentialID"] as? String ?? id, connection: connection, values: data["values"] as? [String: String] ?? [:], provider: data["provider"] as? String ?? "codex", endpoint: data["endpoint"] as? String ?? "http://127.0.0.1:1234/v1", model: data["model"] as? String ?? "")
+        case "connectedCancel": connected.cancel(data["id"] as? String ?? ""); return true
+        case "archiveWidget":
+            let directory = store.directory.appendingPathComponent("Widget Backups")
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try JSONSerialization.data(withJSONObject: data, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("\(UUID().uuidString).dashboardwidget"), options: .atomic)
+            return true
         case "dismiss": app.dismiss(); return true
         case "space": app.setSpace(); return true
         case "overlay": app.setOverlay(); return true
@@ -47,9 +61,14 @@ import WebKit
         case "musicPlaylists": return try musicPlaylists()
         case "providers": return await generator.providers(endpoint: data["endpoint"] as? String ?? "http://127.0.0.1:1234/v1")
         case "generate", "translate":
-            let raw = try await generator.generate(prompt: data["prompt"] as? String ?? "", provider: data["provider"] as? String ?? "codex", endpoint: data["endpoint"] as? String ?? "http://127.0.0.1:1234/v1", model: data["model"] as? String ?? "", widget: action == "generate", theme: data["theme"] as? String ?? "leopard")
+            let prompt = data["prompt"] as? String ?? ""
+            let raw = try await generator.generate(prompt: prompt, provider: data["provider"] as? String ?? "codex", endpoint: data["endpoint"] as? String ?? "http://127.0.0.1:1234/v1", model: data["model"] as? String ?? "", widget: action == "generate", theme: data["theme"] as? String ?? "leopard", size: data["size"] as? String ?? "medium")
             if action == "translate" { return raw }
-            return try JSONSerialization.jsonObject(with: JSONEncoder().encode(WidgetManifest.parse(raw)))
+            let manifest = try WidgetManifest.parse(raw)
+            if prompt.range(of: "\\b(?:fandango|weather|showtimes?|book.*tickets?|live data|stock prices?|news feed|scrap(?:e|ing)|API)\\b", options: [.regularExpression, .caseInsensitive]) != nil, manifest.kind != "connected" {
+                throw DashboardError.message("This request needs real data or a working website. The model returned an offline widget, so it was not accepted. Try again with a source URL.")
+            }
+            return try JSONSerialization.jsonObject(with: JSONEncoder().encode(manifest))
         case "cancel": generator.cancel(); return true
         case "import": await importWidget(); return true
         case "export":
@@ -149,9 +168,9 @@ import WebKit
 }
 
 final class NetworkService: NSObject, URLSessionTaskDelegate {
-    static let hosts: Set<String> = ["api.open-meteo.com", "geocoding-api.open-meteo.com", "api.frankfurter.dev", "api.frankfurter.app", "query1.finance.yahoo.com", "query2.finance.yahoo.com", "stooq.com", "site.api.espn.com", "itunes.apple.com"]
+    static let hosts: Set<String> = ["api.open-meteo.com", "geocoding-api.open-meteo.com", "api.weather.gov", "api.frankfurter.dev", "api.frankfurter.app", "query1.finance.yahoo.com", "query2.finance.yahoo.com", "stooq.com", "site.api.espn.com", "itunes.apple.com"]
     private lazy var session: URLSession = {
-        let config = URLSessionConfiguration.ephemeral; config.timeoutIntervalForRequest = 20
+        let config = URLSessionConfiguration.ephemeral; config.timeoutIntervalForRequest = 12; config.urlCache = nil; config.requestCachePolicy = .reloadIgnoringLocalCacheData
         config.httpAdditionalHeaders = ["User-Agent": "Dashboard2026/0.1 (macOS)"]
         return URLSession(configuration: config, delegate: self, delegateQueue: nil)
     }()
