@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'none'; frame-src about: blob: https:; object-src 'none'; base-uri 'none'">
+  <title>Dashboard 2026</title>
+  <link rel="stylesheet" href="dashboard.css">
+  <script defer src="core.js"></script>
+  <script defer src="widgets.js"></script>
+  <script defer src="dashboard.js"></script>
+</head>
+<body>
+  <main id="dashboard" aria-label="Dashboard"><div id="canvas"></div></main>
+  <div id="effects" aria-hidden="true"></div>
+  <nav id="controls" aria-label="Dashboard controls">
+    <button id="add" class="round-control" title="Add widgets (⌘+)" aria-label="Add widgets">+</button>
+    <button id="remove" class="round-control" title="Remove widgets" aria-label="Remove widgets">−</button>
+    <button id="manage" class="glass-button" hidden>Manage Widgets…</button>
+  </nav>
+  <nav id="right-controls" aria-label="Creation and settings">
+    <button id="studio-button" class="glass-button"><span class="studio-spark" aria-hidden="true">✦</span> Create a Widget…</button>
+    <button id="settings-button" class="round-control settings-control" title="Dashboard settings" aria-label="Dashboard settings">⚙</button>
+    <button id="exit" class="round-control" title="Return to desktop (Esc)" aria-label="Return to desktop">➜</button>
+  </nav>
+  <section id="shelf" aria-label="Widget shelf" hidden>
+    <div class="shelf-header"><input id="widget-search" type="search" placeholder="Search widgets" aria-label="Search widgets"><button id="import-button" class="silver-button">Import…</button></div>
+    <div id="catalog" role="list"></div>
+  </section>
+  <div id="modal-layer" hidden></div>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

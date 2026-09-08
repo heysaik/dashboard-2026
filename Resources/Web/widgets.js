@@ -1,0 +1,194 @@
+'use strict';
+const Widgets = (() => {
+  const { escape: e, Calculator, units, convert, calendarCells, shuffleTiles } = Core;
+  const definitions = new Map();
+  const register = (id, name, width, height, icon, render, settings = null, defaults = {}) => definitions.set(id, { id, name, width, height, icon, render, settings, defaults });
+  const option = (value, current, label = value) => `<option value="${e(value)}" ${value === current ? 'selected' : ''}>${e(label)}</option>`;
+  const select = (key, label, choices, current) => `<label>${e(label)}<select data-setting="${key}" class="classic-select">${choices.map(value => option(value, current)).join('')}</select></label>`;
+  const input = (key, label, value, type = 'text') => `<label>${e(label)}<input type="${type}" data-setting="${key}" value="${e(value)}"></label>`;
+  const svg = inner => `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+  const globe = svg('<circle cx="32" cy="32" r="27" stroke="white" stroke-width="2"/><ellipse cx="32" cy="32" rx="13" ry="27" stroke="white" stroke-width="2"/><path d="M7 22h50M7 42h50M5 32h54M32 5v54" stroke="white" stroke-width="2"/>');
+  const box = (inner, style = '') => `<div class="icon-box ${style}">${inner}</div>`;
+  const clockIcon = '<div class="icon-clock"></div>';
+  const calcIcon = '<div class="icon-calc">' + '<i></i>'.repeat(12) + '</div>';
+  const calIcon = () => `<div class="icon-calendar"><small>${new Date().toLocaleDateString('en-US', { weekday: 'long' })}</small>${new Date().getDate()}</div>`;
+  const noteIcon = '<div class="icon-box paper"></div>';
+  const weatherIcon = '<div class="icon-weather"><div class="sun"></div></div>';
+  const fetchJSON = url => Dashboard.native('fetch', { url });
+  const serviceError = (ctx, error, retry) => { ctx.el.innerHTML = `<div class="service-error">${e(error.message || error)}${retry ? '<button class="silver-button">Try Again</button>' : ''}</div>`; if (retry) ctx.el.querySelector('button').onclick = retry; };
+  const setDynamicHeight = (ctx, height) => { ctx.resize(ctx.instance.width, height); };
+  function weatherArt(code, day = true) { if (!day && code <= 2) return '<div class="moon"></div>'; if (code === 0 || code === 1) return '<div class="sun"></div>'; if (code === 2) return '<div class="sun"></div><div class="cloud"></div>'; return `<div class="cloud"></div>${code >= 51 ? '<span style="position:absolute;top:28px;left:18px;color:#cbe7ff;font-size:20px">╱ ╱ ╱</span>' : ''}`; }
+  const miniWeather = code => `<div class="mini-weather">${code < 3 ? '<div class="sun"></div>' : '<div class="cloud"></div>'}</div>`;
+  function weatherURL(prefs, extra = '') { return `https://api.open-meteo.com/v1/forecast?latitude=${Number(prefs.latitude)}&longitude=${Number(prefs.longitude)}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min${extra}&temperature_unit=${prefs.unit === 'Celsius' ? 'celsius' : 'fahrenheit'}&timezone=auto&forecast_days=6`; }
+  function locationSettings(prefs) { return `${input('city', 'City', prefs.city)}<button type="button" class="silver-button find-city">Find City</button><div class="location-results"></div>${select('unit', 'Temperature', ['Fahrenheit', 'Celsius'], prefs.unit)}<p>Forecasts from Open-Meteo.</p>`; }
+
+  register('weather', 'Weather', 246, 150, weatherIcon, ctx => {
+    ctx.el.innerHTML = '<div class="weather-face"><div class="weather-top"><div class="weather-place">' + e(ctx.prefs.city) + '</div><div class="weather-temp">—°</div></div><div class="weather-error">Updating forecast…</div></div>';
+    const load = async () => {
+      try {
+        const data = await fetchJSON(weatherURL(ctx.prefs)); if (!ctx.alive()) return;
+        if (!data.current || !data.daily) throw new Error('Forecast is unavailable for this location.');
+        ctx.el.innerHTML = `<div class="weather-face"><div class="weather-top"><div class="weather-place">${e(ctx.prefs.city)}<div class="weather-hi-lo">H: ${Math.round(data.daily.temperature_2m_max[0])}°<br>L: ${Math.round(data.daily.temperature_2m_min[0])}°</div></div><div class="weather-art">${weatherArt(data.current.weather_code, data.current.is_day)}</div><div class="weather-temp">${Math.round(data.current.temperature_2m)}°</div></div><div class="forecast">${data.daily.time.slice(0, 6).map((date, index) => `<div class="forecast-day"><div class="day">${new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}</div>${miniWeather(data.daily.weather_code[index])}<div class="temp">${Math.round(data.daily.temperature_2m_max[index])}°</div></div>`).join('')}</div></div>`;
+        ctx.el.title = `Open-Meteo · updated ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+      } catch (error) { if (ctx.alive()) { ctx.el.querySelector('.weather-face').innerHTML = `<div class="weather-error">${e(ctx.prefs.city)}<br>${e(error.message)}<br><button class="silver-button">Try Again</button></div>`; ctx.el.querySelector('button').onclick = load; } }
+    }; load(); ctx.interval(load, 900000);
+  }, locationSettings, { city: 'Cupertino', latitude: 37.323, longitude: -122.032, unit: 'Fahrenheit' });
+
+  const zones = { Cupertino: 'America/Los_Angeles', 'San Francisco': 'America/Los_Angeles', 'Los Angeles': 'America/Los_Angeles', 'New York': 'America/New_York', Chicago: 'America/Chicago', London: 'Europe/London', Paris: 'Europe/Paris', Berlin: 'Europe/Berlin', Tokyo: 'Asia/Tokyo', Singapore: 'Asia/Singapore', Sydney: 'Australia/Sydney', Mumbai: 'Asia/Kolkata', Dubai: 'Asia/Dubai', UTC: 'UTC' };
+  register('clock', 'World Clock', 140, 148, clockIcon, ctx => {
+    const marks = Array.from({ length: 60 }, (_, i) => { const angle = i * Math.PI / 30; const inner = i % 5 ? 46 : 43; return `<line x1="${55 + Math.sin(angle) * inner}" y1="${55 - Math.cos(angle) * inner}" x2="${55 + Math.sin(angle) * 48}" y2="${55 - Math.cos(angle) * 48}" stroke="#222" stroke-width="${i % 5 ? .45 : 1}"/>`; }).join('');
+    const numbers = Array.from({ length: 12 }, (_, i) => { const n = i + 1, a = n * Math.PI / 6; return `<text x="${55 + Math.sin(a) * 35}" y="${59 + -Math.cos(a) * 35}" text-anchor="middle" font-family="Helvetica Neue,Arial" font-size="12" fill="#202020">${n}</text>`; }).join('');
+    ctx.el.innerHTML = `<div class="clock-face"><div class="clock-period"></div><svg viewBox="0 0 110 110"><defs><radialGradient id="clock-${ctx.instance.id}"><stop stop-color="#fff"/><stop offset=".85" stop-color="#f5f5f3"/><stop offset="1" stop-color="#c2c2c0"/></radialGradient></defs><circle cx="55" cy="55" r="53" fill="url(#clock-${ctx.instance.id})" stroke="#454545" stroke-width="1.7"/>${marks}${numbers}<g class="hour"><path d="M52 61 L52 32 L55 23 L58 32 L58 61Z" fill="#222"/></g><g class="minute"><path d="M53.5 62 L53.5 18 L55 8 L56.5 18 L56.5 62Z" fill="#222"/></g><g class="second"><line x1="55" y1="66" x2="55" y2="8" stroke="#be3029" stroke-width="1.2"/><circle cx="55" cy="55" r="3" fill="#e84432" stroke="#8e2e20" stroke-width=".7"/></g></svg><div class="clock-label">${e(ctx.prefs.city.toUpperCase())}</div></div>`;
+    const tick = () => {
+      const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: zones[ctx.prefs.city] || ctx.prefs.timezone || 'America/Los_Angeles', hour: 'numeric', minute: 'numeric', second: 'numeric', hourCycle: 'h23' }).formatToParts(new Date()).map(x => [x.type, x.value]));
+      const h = Number(parts.hour), m = Number(parts.minute), s = Number(parts.second);
+      for (const [name, angle] of [['hour', (h % 12) * 30 + m / 2], ['minute', m * 6 + s / 10], ['second', s * 6]]) ctx.el.querySelector('.' + name).setAttribute('transform', `rotate(${angle} 55 55)`);
+      ctx.el.querySelector('.clock-period').textContent = h < 12 ? 'AM' : 'PM'; ctx.el.querySelector('.clock-face').classList.toggle('night', h < 6 || h >= 19);
+    }; tick(); ctx.interval(tick, 1000);
+  }, prefs => select('city', 'City', Object.keys(zones), prefs.city), { city: 'Cupertino' });
+
+  register('calendar', 'iCal', 300, 141, calIcon, ctx => {
+    let date = new Date(); let selected = new Date(); let month = date.getMonth(), year = date.getFullYear();
+    const render = () => {
+      const cells = calendarCells(year, month);
+      ctx.el.innerHTML = `<div class="calendar-face"><div class="date-page"><div class="date-weekday">${selected.toLocaleDateString('en-US', { weekday: 'long' })}</div><div class="date-number">${selected.getDate()}</div></div><div class="month-page"><div class="month-header"><button aria-label="Previous month" data-month="-1">◀</button><span>${new Date(year, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span><button aria-label="Next month" data-month="1">▶</button></div><div class="month-grid">${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => `<span class="weekday">${d}</span>`).join('')}${cells.map(day => day ? `<button data-day="${day}" class="${day === date.getDate() && month === date.getMonth() && year === date.getFullYear() ? 'today' : ''}" aria-label="${e(new Date(year, month, day).toDateString())}">${day}</button>` : '<span class="blank">·</span>').join('')}</div></div></div>`;
+      ctx.el.querySelectorAll('[data-month]').forEach(button => button.onclick = () => { const next = new Date(year, month + Number(button.dataset.month), 1); year = next.getFullYear(); month = next.getMonth(); render(); });
+      ctx.el.querySelectorAll('[data-day]').forEach(button => button.onclick = () => { selected = new Date(year, month, Number(button.dataset.day)); render(); });
+      ctx.el.querySelector('.date-page').ondblclick = () => { selected = date = new Date(); month = date.getMonth(); year = date.getFullYear(); render(); };
+    }; render(); ctx.interval(() => { const now = new Date(); if (now.toDateString() !== date.toDateString()) { date = selected = now; month = date.getMonth(); year = date.getFullYear(); render(); } }, 60000);
+  }, () => '<p>Click the arrows to browse months. Click a day to turn the date page. Double-click the date to return to today.</p>');
+
+  register('calculator', 'Calculator', 158, 226, calcIcon, ctx => {
+    const calc = new Calculator(); if (ctx.prefs.calculator) { for (const key of ['display','stored','operator','fresh','lastOperand','lastOperator','memory']) if (key in ctx.prefs.calculator) calc[key] = ctx.prefs.calculator[key]; } const memory = ['m+', 'm−', 'mc', 'mr', '÷']; const digits = ['7', '8', '9', '×', '4', '5', '6', '−', '1', '2', '3', '+', '0', '.', 'c', '=']; const keys = [...memory, ...digits, '±', '%', '⌫'];
+    const button = key => `<button aria-label="${({ c: 'Clear', '⌫': 'Delete digit', mr: 'Recall memory', mc: 'Clear memory' })[key] || e(key)}" data-key="${e(key)}">${e(key)}</button>`;
+    ctx.el.innerHTML = `<div class="calculator-face"><output class="calc-display" aria-live="polite">${e(calc.display)}</output><div class="calc-memory">${memory.map(button).join('')}</div><div class="calc-pad">${digits.map(button).join('')}</div></div>`;
+    const press = key => { ctx.el.querySelector('output').textContent = calc.press(key); ctx.prefs.calculator = { ...calc }; ctx.save(); };
+    ctx.el.querySelectorAll('button').forEach(button => button.onclick = () => press(button.dataset.key));
+    ctx.on(ctx.root, 'keydown', event => { const key = ({ Enter: '=', Escape: 'c', Backspace: '⌫', '*': '×', '/': '÷', '-': '−' })[event.key] || event.key; if (keys.includes(key) || key === '=') { event.preventDefault(); event.stopPropagation(); press(key); } });
+  }, () => '<p>Use the round keys or your keyboard. Memory, percentages, sign changes, and repeated equals work just like a pocket calculator.</p>');
+
+  register('stickies', 'Stickies', 190, 176, noteIcon, ctx => {
+    ctx.el.innerHTML = `<div class="sticky-face ${e(ctx.prefs.color)}"><textarea aria-label="Sticky note" spellcheck="true" placeholder="">${e(ctx.prefs.text)}</textarea></div>`;
+    const textarea = ctx.el.querySelector('textarea'); textarea.style.fontFamily = ctx.prefs.font === 'Helvetica' ? 'Helvetica Neue, sans-serif' : 'Marker Felt, Comic Sans MS, cursive'; textarea.style.fontSize = `${Number(ctx.prefs.size) || 17}px`;
+    textarea.oninput = () => { ctx.prefs.text = textarea.value; ctx.save(); };
+  }, prefs => `${select('color', 'Paper color', ['yellow', 'pink', 'blue', 'green', 'purple'], prefs.color)}${select('font', 'Font', ['Marker Felt', 'Helvetica'], prefs.font)}${select('size', 'Text size', ['14', '17', '20', '24'], prefs.size)}`, { text: '', color: 'yellow', font: 'Marker Felt', size: '17' });
+
+  register('dictionary', 'Dictionary', 320, 37, box('D', 'wood'), ctx => {
+    ctx.el.innerHTML = '<div class="dictionary-face"><form class="dictionary-bar"><span class="dictionary-title">Dictionary</span><input aria-label="Look up a word" type="search" placeholder="Search" required></form><div class="dictionary-result" hidden></div></div>';
+    const form = ctx.el.querySelector('form'), output = ctx.el.querySelector('.dictionary-result');
+    form.onsubmit = async event => { event.preventDefault(); const word = form.querySelector('input').value.trim(); if (!word) return; output.hidden = false; output.textContent = 'Looking up…'; setDynamicHeight(ctx, 245); try { const result = await Dashboard.native('dictionary', { word }); if (ctx.alive()) output.textContent = result; } catch (error) { output.textContent = error.message; } };
+  }, () => '<p>Definitions come from dictionaries installed on this Mac. Works offline.</p>');
+
+  register('converter', 'Unit Converter', 276, 193, box(svg('<path d="M6 11h52v42H6z" fill="#eee"/><path d="M8 22h48M8 44h48" stroke="#bba065" stroke-width="8"/><path d="M15 12v12m8-12v8m8-8v12m8-12v8m8-8v12" stroke="#888"/>'), 'metal'), ctx => {
+    const p = ctx.prefs;
+    const render = () => {
+      const names = Object.keys(units[p.category]); if (!names.includes(p.from)) p.from = names[0]; if (!names.includes(p.to)) p.to = names[1];
+      ctx.el.innerHTML = `<div class="converter-face"><h2 class="widget-heading">Unit Converter</h2><select aria-label="Conversion category" class="classic-select converter-type">${Object.keys(units).map(category => option(category, p.category)).join('')}</select><div class="convert-row"><input aria-label="Value to convert" type="number" value="${e(p.value)}" step="any"><select aria-label="From unit" class="classic-select from">${names.map(name => option(name, p.from)).join('')}</select></div><div class="convert-row"><input aria-label="Converted value" class="result" readonly><select aria-label="To unit" class="classic-select to">${names.map(name => option(name, p.to)).join('')}</select></div></div>`;
+      const update = () => { const value = convert(Number(p.value), p.category, p.from, p.to); ctx.el.querySelector('.result').value = Number.isFinite(value) ? Number(value.toPrecision(10)) : ''; ctx.save(); };
+      ctx.el.querySelector('.converter-type').onchange = event => { p.category = event.target.value; render(); };
+      ctx.el.querySelector('input[type=number]').oninput = event => { p.value = event.target.value; update(); };
+      for (const key of ['from', 'to']) ctx.el.querySelector('.' + key).onchange = event => { p[key] = event.target.value; update(); };
+      update();
+    }; render();
+  }, () => '<p>Ten categories of offline conversions. Currency Converter is a separate widget with daily exchange rates.</p>', { category: 'Length', from: 'Meters', to: 'Feet', value: '1' });
+
+  register('currency', 'Currency Converter', 276, 198, box('€', 'metal'), ctx => {
+    const codes = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'KRW', 'SGD', 'NZD', 'MXN', 'BRL']; const p = ctx.prefs;
+    ctx.el.innerHTML = `<div class="converter-face"><h2 class="widget-heading">Currency Converter</h2><div class="convert-row"><input type="number" aria-label="Amount" value="${e(p.amount)}"><select aria-label="From currency" class="classic-select from">${codes.map(code => option(code, p.from)).join('')}</select></div><div class="convert-row"><input aria-label="Converted amount" class="result" readonly value="—"><select aria-label="To currency" class="classic-select to">${codes.map(code => option(code, p.to)).join('')}</select></div><div class="converter-footer">Updating exchange rate…</div></div>`;
+    let rate = null, request = 0;
+    const update = () => { ctx.el.querySelector('.result').value = rate !== null ? (Number(p.amount) * rate).toFixed(2) : ''; ctx.save(); };
+    const load = async () => { const id = ++request; try { const data = p.from === p.to ? { rates: { [p.to]: 1 }, date: new Date().toISOString().slice(0, 10) } : await fetchJSON(`https://api.frankfurter.dev/v1/latest?base=${p.from}&symbols=${p.to}`); if (!ctx.alive() || id !== request) return; rate = data.rates[p.to]; ctx.el.querySelector('.converter-footer').textContent = `ECB reference rate · ${data.date}`; update(); } catch (error) { if (ctx.alive() && id === request) { rate = null; update(); ctx.el.querySelector('.converter-footer').textContent = error.message; } } };
+    ctx.el.querySelector('input[type=number]').oninput = event => { p.amount = event.target.value; update(); };
+    ['from', 'to'].forEach(key => ctx.el.querySelector('.' + key).onchange = event => { p[key] = event.target.value; rate = null; load(); }); load();
+  }, () => '<p>Daily ECB reference rates via Frankfurter. Rates are indicative and are not live trading prices.</p>', { from: 'EUR', to: 'USD', amount: '1' });
+
+  register('stocks', 'Stocks', 215, 306, box(svg('<path d="M4 50l10-4 4 5 6-20 6 8 8-19 6 7 5-18 10 5" stroke="white" stroke-width="2"/><path d="M5 16v41h55" stroke="#a0bade"/>')), ctx => {
+    let selected = 0, quotes = [], request = 0;
+    const ranges = { '1d': ['1d', '5m'], '1w': ['5d', '30m'], '1m': ['1mo', '1d'], '3m': ['3mo', '1d'], '6m': ['6mo', '1d'], '1y': ['1y', '1wk'] };
+    ctx.prefs.range ||= '1m';
+    const render = () => {
+      const quote = quotes[selected]; const values = quote?.history || [];
+      const min = Math.min(...values), max = Math.max(...values); const points = values.map((value, index) => `${index / Math.max(values.length - 1, 1) * 190},${74 - (value - min) / Math.max(max - min, 0.01) * 66}`).join(' ');
+      ctx.el.innerHTML = `<div class="stocks-face"><div class="stock-rows">${quotes.map((q, index) => `<button class="stock-row ${index === selected ? 'selected' : ''}" data-index="${index}"><strong>${e(q.symbol)}</strong><span>${q.price == null ? '—' : q.price.toFixed(2)}</span><span class="stock-change ${q.change < 0 ? 'negative' : ''}">${q.change == null ? '—' : `${q.change >= 0 ? '+' : ''}${q.change.toFixed(2)}%`}</span></button>`).join('')}</div><div class="stock-range">${Object.keys(ranges).map(range => `<button data-range="${range}" class="${ctx.prefs.range === range ? 'selected' : ''}">${range}</button>`).join('')}</div><svg class="stock-chart" viewBox="0 0 190 80" preserveAspectRatio="none">${[10, 30, 50, 70].map(y => `<path d="M0 ${y}H190" stroke="#a3c3eb33"/>`).join('')}${values.length ? `<polyline points="${points}" fill="none" stroke="#fff" stroke-width="1.6"/>` : ''}</svg><div class="stock-status">${e(quote?.error || (quote?.time ? `Delayed · ${new Date(quote.time * 1000).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : 'Updating quotes…'))}</div></div>`;
+      ctx.el.querySelectorAll('[data-index]').forEach(button => button.onclick = () => { selected = Number(button.dataset.index); render(); });
+      ctx.el.querySelectorAll('[data-range]').forEach(button => button.onclick = () => { ctx.prefs.range = button.dataset.range; ctx.save(); load(); });
+    };
+    const load = async () => {
+      const id = ++request;
+      quotes = (ctx.prefs.symbols || 'AAPL,MSFT,GOOG,AMZN,NVDA').split(',').map(s => s.trim().toUpperCase()).filter(s => /^[A-Z0-9.^=-]{1,15}$/.test(s)).slice(0, 6).map(symbol => ({ symbol })); render();
+      await Promise.allSettled(quotes.map(async (quote, index) => { try { const data = await fetchJSON(`https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(quote.symbol)}?interval=${ranges[ctx.prefs.range][1]}&range=${ranges[ctx.prefs.range][0]}`); const result = data.chart?.result?.[0]; if (!result) throw new Error('Quote unavailable'); const price = result.meta.regularMarketPrice; const history = result.indicators.quote[0].close.filter(Number.isFinite); let previous = result.meta.previousClose || result.meta.regularMarketPreviousClose; if (!previous) { try { const daily = await fetchJSON(`https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(quote.symbol)}?interval=5m&range=1d`); previous = daily.chart?.result?.[0]?.meta?.previousClose || daily.chart?.result?.[0]?.meta?.chartPreviousClose; } catch {} } if (id === request) quotes[index] = { symbol: quote.symbol, price, change: Number.isFinite(previous) && previous > 0 ? (price - previous) / previous * 100 : null, history, time: result.meta.regularMarketTime }; } catch { if (id === request) quotes[index] = { symbol: quote.symbol, error: 'Quote source unavailable. Try refreshing later.' }; } }));
+      if (ctx.alive() && request === id) render();
+    }; load(); ctx.interval(load, 300000);
+  }, prefs => `${input('symbols', 'Stock symbols, separated by commas', prefs.symbols)}<p>Delayed Yahoo Finance quotes and one-month charts. Availability depends on the data provider. Click a row to view its chart.</p>`, { symbols: 'AAPL,MSFT,GOOG,AMZN,NVDA', range: '1m' });
+
+  register('translation', 'Translation', 287, 251, box(globe), ctx => {
+    const languages = ['English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese', 'Japanese', 'Chinese', 'Korean', 'Hindi', 'Arabic']; const p = ctx.prefs;
+    ctx.el.innerHTML = `<div class="blue-face"><div class="translation-controls"><span>Translate from</span><select class="classic-select from" aria-label="Source language">${languages.map(l => option(l, p.from)).join('')}</select></div><textarea class="translation-area" aria-label="Text to translate" placeholder="Enter text…">${e(p.text)}</textarea><div class="translation-middle"><button class="silver-button swap" title="Swap languages">⇅</button><div class="translation-controls"><span>To</span><select class="classic-select to" aria-label="Target language">${languages.map(l => option(l, p.to)).join('')}</select></div><button class="silver-button translate">→</button></div><div class="translation-area translation-output" aria-live="polite">${e(p.result || '')}</div><div class="translate-status">Uses your selected AI provider.</div></div>`;
+    ctx.el.querySelector('textarea').oninput = event => { p.text = event.target.value; ctx.save(); };
+    ['from', 'to'].forEach(key => ctx.el.querySelector('.' + key).onchange = event => { p[key] = event.target.value; ctx.save(); });
+    ctx.el.querySelector('.swap').onclick = () => { [p.from, p.to] = [p.to, p.from]; ctx.el.querySelector('.from').value = p.from; ctx.el.querySelector('.to').value = p.to; ctx.save(); };
+    ctx.el.querySelector('.translate').onclick = async () => { if (!p.text.trim()) return; const button = ctx.el.querySelector('.translate'), status = ctx.el.querySelector('.translate-status'); button.disabled = true; status.textContent = 'Translating…'; try { const result = await Dashboard.native('translate', { ...Dashboard.aiSettings(), prompt: `Translate this text from ${p.from} to ${p.to}:\n${p.text}` }); if (!ctx.alive()) return; p.result = result; ctx.el.querySelector('.translation-output').textContent = result; status.textContent = 'Translation complete'; ctx.save(); } catch (error) { if (ctx.alive()) status.textContent = error.message; } finally { button.disabled = false; } };
+  }, () => '<p>Translations use the provider selected in Dashboard Settings. LM Studio keeps the request on this Mac; Claude Code and Codex use their configured service.</p>', { from: 'English', to: 'Japanese', text: '', result: '' });
+
+  register('contacts', 'Address Book', 256, 79, box('@', 'metal'), ctx => {
+    ctx.el.innerHTML = `<div class="address-face"><div class="address-search"><div class="address-avatar">${svg('<circle cx="32" cy="22" r="13" fill="#ddd"/><path d="M8 59V45q24-20 48 0v14" fill="#ddd"/>')}</div><form class="address-fields"><input type="search" aria-label="Search contacts" placeholder="Name" required><strong>Address Book Search</strong></form></div><div class="contact-results" hidden></div></div>`;
+    ctx.el.querySelector('form').onsubmit = async event => { event.preventDefault(); const query = ctx.el.querySelector('input').value.trim(); if (!query) return; const results = ctx.el.querySelector('.contact-results'); results.hidden = false; results.textContent = 'Searching…'; setDynamicHeight(ctx, 267); try { const contacts = await Dashboard.native('contacts', { query }); if (ctx.alive()) results.innerHTML = contacts.length ? contacts.map(c => `<div class="contact-result"><strong>${e(c.name)}</strong><p>${e(c.email)}</p><p>${e(c.phone)}</p></div>`).join('') : 'No matching contacts.'; } catch (error) { results.textContent = error.message; } };
+  }, () => '<p>Searches Contacts on this Mac. Access is requested only when you submit a name. Contact details stay on this Mac.</p>');
+
+  register('tilegame', 'Tile Game', 158, 180, box(svg('<path d="M5 5h54v54H5z" fill="#b6dc67"/><path d="M5 5h18v18H5zM23 23h18v18H23zM41 41h18v18H41z" fill="#689e31"/><path d="M23 5v54M41 5v54M5 23h54M5 41h54" stroke="#365121"/>')), ctx => {
+    const p = ctx.prefs; if (!Array.isArray(p.board) || p.board.length !== 16 || new Set(p.board).size !== 16) p.board = shuffleTiles();
+    const render = () => {
+      ctx.el.innerHTML = `<div class="tile-face"><div class="tile-board ${p.picture === 'Numbers' ? '' : 'photo-tiles'}">${p.board.map((value, index) => `<button data-index="${index}" style="background-position:${value % 4 * 100 / 3}% ${Math.floor(value / 4) * 100 / 3}%" class="${value === 15 ? 'hole' : ''}" aria-label="${value === 15 ? 'Empty tile' : 'Tile ' + (value + 1)}">${value === 15 ? '' : value + 1}</button>`).join('')}</div><div class="tile-status">${p.board.every((v, i) => v === i) ? 'Solved!' : `${p.moves || 0} moves · click a tile`}</div></div>`;
+      ctx.el.querySelectorAll('[data-index]').forEach(button => button.onclick = () => { const index = Number(button.dataset.index), hole = p.board.indexOf(15); if (Math.abs(index % 4 - hole % 4) + Math.abs(Math.floor(index / 4) - Math.floor(hole / 4)) !== 1) return; [p.board[index], p.board[hole]] = [p.board[hole], p.board[index]]; p.moves = (p.moves || 0) + 1; render(); ctx.save(); });
+    }; render();
+  }, prefs => `${select('picture', 'Puzzle', ['Photo', 'Numbers'], prefs.picture)}<p>Reassemble the picture or arrange 1 to 15. Click a tile beside the empty square.</p><button class="silver-button shuffle-tiles">New Game</button><p>Photo: NPS / Diane Renkin (public domain).</p>`, { moves: 0, picture: 'Photo' });
+
+  register('music', 'iTunes', 168, 234, box('♫', 'metal'), ctx => {
+    ctx.el.innerHTML = '<div class="music-face"><div class="music-screen"><strong>iTunes</strong><span>Click the center button<br>to connect to Music</span></div><div class="music-wheel"><button class="menu" data-command="status">MENU</button><button class="prev" aria-label="Previous track" data-command="previous">◀◀</button><button class="next" aria-label="Next track" data-command="next">▶▶</button><button class="play" aria-label="Play or pause" data-command="playpause">▶Ⅱ</button><button class="center" aria-label="Connect to Music" data-command="status"></button></div></div>';
+    let connected = false;
+    const command = async command => { try { const result = await Dashboard.native('music', { command }); if (!ctx.alive()) return; connected = true; ctx.el.querySelector('.music-screen').innerHTML = `<strong>${e(result.title)}</strong><span>${e(result.artist)}<br>${e(result.state)}</span>`; } catch (error) { connected = false; if (ctx.alive()) ctx.el.querySelector('.music-screen').innerHTML = `<span>${e(error.message)}</span>`; } };
+    ctx.el.querySelectorAll('[data-command]').forEach(button => button.onclick = () => command(button.dataset.command)); ctx.interval(() => { if (connected) command('status'); }, 10000);
+  }, () => '<p>The classic iTunes controller, connected to the Music app. Press the center button to connect. macOS may ask for Automation access.</p>');
+
+  function searchWidget(id, name, icon, title, className, url, caption) {
+    register(id, name, 278, 116, icon, ctx => {
+      ctx.el.innerHTML = `<div class="search-face ${className}"><h2>${title}</h2><form><input type="search" aria-label="${e(name)} search" placeholder="Search" required><button class="silver-button">Go</button></form><div class="search-caption">${caption}</div></div>`;
+      ctx.el.querySelector('form').onsubmit = event => { event.preventDefault(); const query = ctx.el.querySelector('input').value.trim(); if (query) Dashboard.open(url(query)); };
+    }, () => `<p>${e(caption)}</p>`);
+  }
+  searchWidget('google', 'Google', box('<span style="font:17px Georgia;color:#4678bb;text-shadow:none">Google</span>', 'metal'), '<span style="color:#4285c2">G</span><span style="color:#d34b37">o</span><span style="color:#d8ac2b">o</span><span style="color:#4285c2">g</span><span style="color:#499a46">l</span><span style="color:#d34b37">e</span>', '', q => `https://www.google.com/search?q=${encodeURIComponent(q)}`, 'Opens results in your browser');
+  searchWidget('business', 'Business', box('⌕', 'paper'), 'Business', 'yellow-pages', q => `https://maps.apple.com/?q=${encodeURIComponent(q)}`, 'Find businesses with Apple Maps in your browser');
+  searchWidget('people', 'People', box('⌕', 'metal'), 'People', '', q => `https://www.whitepages.com/name/${encodeURIComponent(q)}`, 'Opens the directory in your browser');
+
+  register('flight', 'Flight Tracker', 263, 205, box('✈'), ctx => {
+    ctx.el.innerHTML = '<div class="flight-face"><div class="flight-plane">✈</div><h2>Flight Tracker</h2><form><input aria-label="Airline and flight number" placeholder="Airline + flight number, e.g. UAL 238" required><button class="silver-button">Track Flight</button></form><p>Opens current flight details on FlightAware.<br>The original Dashboard flight feed is retired.</p></div>';
+    ctx.el.querySelector('form').onsubmit = event => { event.preventDefault(); const flight = ctx.el.querySelector('input').value.replace(/\s/g, '').toUpperCase(); if (!/^[A-Z0-9]{3,12}$/.test(flight)) { Dashboard.toast('Enter an airline code and flight number, such as UAL238.'); return; } Dashboard.open(`https://www.flightaware.com/live/flight/${encodeURIComponent(flight)}`); };
+  }, () => '<p>FlightAware opens in your browser. The retired Apple widget’s live flight feed is no longer available.</p>');
+
+  register('sports', 'ESPN', 255, 278, box('ESPN', 'red'), ctx => {
+    const p = ctx.prefs; const leagues = { NBA: 'basketball/nba', WNBA: 'basketball/wnba', NFL: 'football/nfl', MLB: 'baseball/mlb', NHL: 'hockey/nhl', Soccer: 'soccer/eng.1' };
+    ctx.el.innerHTML = `<div class="sports-face"><h2 class="sports-brand">ESPN</h2><select class="classic-select" aria-label="League">${Object.keys(leagues).map(l => option(l, p.league)).join('')}</select><div class="sports-results"><div class="service-error">Loading scores…</div></div></div>`;
+    let request = 0;
+    const load = async () => { const id = ++request; try { const data = await fetchJSON(`https://site.api.espn.com/apis/site/v2/sports/${leagues[p.league]}/scoreboard`); if (!ctx.alive() || request !== id) return; ctx.el.querySelector('.sports-results').innerHTML = data.events?.length ? data.events.map(event => `<div class="score-game"><div class="score-status">${e(event.status?.type?.shortDetail || new Date(event.date).toLocaleString())}</div>${(event.competitions?.[0]?.competitors || []).map(team => `<div class="score-team"><span>${e(team.team?.abbreviation || team.team?.displayName)}</span><b>${e(team.score ?? '—')}</b></div>`).join('')}</div>`).join('') : '<div class="service-error">No games scheduled today.</div>'; } catch (error) { if (ctx.alive() && request === id) ctx.el.querySelector('.sports-results').innerHTML = `<div class="service-error">${e(error.message)}</div>`; } };
+    ctx.el.querySelector('select').onchange = event => { p.league = event.target.value; ctx.save(); load(); }; load(); ctx.interval(load, 120000);
+  }, () => '<p>Today’s scoreboard from ESPN’s public feed. Score availability depends on the league and season. Refreshes every two minutes.</p>', { league: 'NBA' });
+
+  register('ski', 'Ski Report', 232, 242, box('❄', 'wood'), ctx => {
+    ctx.el.innerHTML = `<div class="ski-face"><h2>${e(ctx.prefs.city.toUpperCase())}</h2><div class="ski-temp">—°</div><div class="ski-data">Loading mountain weather…</div><div class="ski-note">Mountain forecast · Open-Meteo<br>Lift and trail reports are not available.</div></div>`;
+    const load = async () => { try { const data = await fetchJSON(weatherURL(ctx.prefs, ',snowfall_sum')); if (!ctx.alive()) return; ctx.el.querySelector('.ski-temp').textContent = `${Math.round(data.current.temperature_2m)}°`; ctx.el.querySelector('.ski-data').innerHTML = `Today’s high: ${Math.round(data.daily.temperature_2m_max[0])}°<br>Today’s low: ${Math.round(data.daily.temperature_2m_min[0])}°<br>Snowfall forecast: ${Number(data.daily.snowfall_sum?.[0] || 0).toFixed(1)} cm<br>Next 6 days: ${(data.daily.snowfall_sum || []).reduce((a, b) => a + b, 0).toFixed(1)} cm`; } catch (error) { if (ctx.alive()) ctx.el.querySelector('.ski-data').textContent = error.message; } }; load(); ctx.interval(load, 900000);
+  }, locationSettings, { city: 'Heavenly', latitude: 38.9353, longitude: -119.94, unit: 'Fahrenheit' });
+
+  register('movies', 'Movies', 270, 281, box('<span style="font:11px Georgia;background:#d2b3ed;color:#503866;border:3px double #85649e;padding:6px">ADMIT<br>ONE</span>', 'metal'), ctx => {
+    ctx.el.innerHTML = '<div class="movies-face"><h2>Movies</h2><form><input type="search" placeholder="Search movies" aria-label="Search movies" required></form><div class="movie-results"><div class="service-error">Find a film in the Apple movie catalog.</div></div></div>';
+    let request = 0;
+    ctx.el.querySelector('form').onsubmit = async event => { event.preventDefault(); const id = ++request, term = ctx.el.querySelector('input').value.trim(); if (!term) return; const results = ctx.el.querySelector('.movie-results'); results.textContent = 'Searching…'; try { const data = await fetchJSON(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=movie&limit=12`); if (!ctx.alive() || request !== id) return; results.innerHTML = data.results?.length ? data.results.map((movie, index) => `<button class="movie-result" data-index="${index}"><img src="${e(movie.artworkUrl100)}" alt=""><span>${e(movie.trackName)}<small>${e(movie.releaseDate?.slice(0, 4))} · ${e(movie.contentAdvisoryRating || '')}</small></span></button>`).join('') : '<div class="service-error">No movies found.</div>'; results.querySelectorAll('button').forEach(button => button.onclick = () => Dashboard.open(data.results[Number(button.dataset.index)].trackViewUrl)); } catch (error) { if (ctx.alive() && request === id) results.textContent = error.message; } };
+  }, () => '<p>Search the Apple movie catalog and open a film to see its details. The original local cinema showtime service is retired.</p>');
+
+  register('webclip', 'Web Clip', 340, 255, box(svg('<rect x="5" y="7" width="54" height="49" rx="3" fill="#eee"/><path d="M5 18h54" stroke="#aaa"/><path d="M13 26h36M13 34h25M13 42h32" stroke="#aaa" stroke-width="3"/>'), 'metal'), ctx => {
+    const p = ctx.prefs; let url = null; try { const parsed = new URL(p.url); if (parsed.protocol === 'https:') url = parsed.href; } catch {}
+    ctx.el.innerHTML = `<div class="webclip-face"><div class="clip">${url ? `<iframe sandbox="allow-scripts" referrerpolicy="no-referrer" src="${e(url)}" title="Web Clip"></iframe>` : '<div class="clip-placeholder">Click ⓘ to choose a website.<br>Some sites prevent embedding; use Open to visit them.</div>'}</div><div class="webclip-title"><span>${e(p.title || 'Web Clip')}</span><button class="silver-button">Open</button></div></div>`;
+    ctx.el.querySelector('button').onclick = () => url ? Dashboard.open(url) : ctx.flip();
+  }, prefs => `${input('title', 'Title', prefs.title)}${input('url', 'Website (https://)', prefs.url)}<p>Some websites block embedded views. Open always visits the page in your browser.</p>`, { title: 'Web Clip', url: '' });
+
+  return { definitions, locationSettings, fetchJSON, option, input, select, svg, box };
+})();

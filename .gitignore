@@ -1,0 +1,13 @@
+.DS_Store
+build/
+*.xcuserstate
+xcuserdata/
+Research/*.png
+artifacts/
+node_modules/
+build-output.log
+dist/
+Research/*.c
+Research/*.h
+Research/*.m
+Research/spaces-research.md
