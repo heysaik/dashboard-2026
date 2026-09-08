@@ -10,7 +10,7 @@ import Foundation
     """
     static let instructions = """
     Create one functional, beautiful Mac OS X Dashboard widget. Return ONLY a JSON object with version:1, name:string (max 80 characters), width:integer (140–800), height:integer (100–700), html:string (a complete self-contained HTML document). Do not use tools, inspect files, execute commands, or include Markdown fences.
-    Recreate 2005–2012 skeuomorphic Dashboard styling: real-looking materials, beveled edges, dimensional controls, subtle texture, strong typography, delicate highlights and deep soft shadows. No modern SaaS cards, decorative labels above headings, emoji icons, external dependencies, fonts, or placeholder data.
+    No decorative labels above headings, emoji icons, external dependencies, custom fonts, or placeholder data. Follow the requested Dashboard theme below.
     Your HTML runs in a sandboxed iframe with inline CSS and JavaScript enabled. No network, native APIs, external images, popups, file access, cookies or localStorage. Draw illustrations with inline SVG/CSS/canvas. All timers/calculations must actually work. Use system fonts. Body margin:0; transparent outside your widget; fit width and height; box-sizing:border-box. Do not include a drag handle or close/info controls; the host supplies them. Keep text legible at actual size.
     For persistent state use window.dashboardState (initial JSON value), then call window.saveDashboardState(value) with JSON-serializable values whenever state changes. Those APIs are injected by the host before your scripts. Make all buttons and form controls keyboard accessible. Respect prefers-reduced-motion. Render useful empty states instead of invented live data. Do not promise data connections you cannot access.
     """
@@ -51,12 +51,15 @@ import Foundation
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { if process.isRunning { kill(pid, SIGKILL) } }
         }
     }
-    func generate(prompt: String, provider: String, endpoint: String, model: String, widget: Bool = true) async throws -> String {
+    func generate(prompt: String, provider: String, endpoint: String, model: String, widget: Bool = true, theme: String = "leopard") async throws -> String {
         guard !running else { throw DashboardError.message("A request is already running. Wait for it or cancel it first.") }
         guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, prompt.count <= 12_000 else { throw DashboardError.message("Enter a description under 12,000 characters.") }
         running = true; cancelled = false
         defer { running = false; process = nil; task = nil }
-        let system = widget ? Self.instructions : "Translate accurately. Return only the translation, with no commentary. Do not use any tools."
+        let style = theme == "liquid"
+            ? "Match current Apple system widgets in clear rendering mode: 170x170 for small widgets, 348x170 for medium, or 348x360 for large. Use a transparent background with white foreground content, compact SF-style system typography, a large primary value, and carefully aligned supporting content with 16-point outer insets. Use neutral translucent controls and 22-point outer corners. The host supplies the native glass material. Do not draw chrome, gradients, decorative icons or layered cards. Respond to window.dashboardTheme and the dashboardthemechange event if you customize theme-specific behavior."
+            : "Recreate Leopard skeuomorphic Dashboard styling: real-looking materials, beveled edges, dimensional controls, subtle texture, strong typography, delicate highlights and deep soft shadows."
+        let system = widget ? Self.instructions + "\n" + style : "Translate accurately. Return only the translation, with no commentary. Do not use any tools."
         if provider == "lmstudio" {
             var request = URLRequest(url: try localURL(endpoint, path: "chat/completions"))
             request.httpMethod = "POST"; request.timeoutInterval = 180

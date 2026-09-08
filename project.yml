@@ -33,6 +33,7 @@ targets:
         CFBundleIconFile: AppIcon
         NSPrincipalClass: NSApplication
         NSHighResolutionCapable: true
+        NSPrefersDisplaySafeAreaCompatibilityMode: false
         NSContactsUsageDescription: Show contacts you search for in the Address Book widget.
         NSAppleEventsUsageDescription: Control playback in Music from the Music widget.
         NSAppTransportSecurity:

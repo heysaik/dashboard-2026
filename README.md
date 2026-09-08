@@ -31,6 +31,14 @@ Requires macOS 14 or later, Xcode, and [XcodeGen](https://github.com/yonaskolb/X
 
 Full-screen mode automatically requests the leftmost Space using private SkyLight operations. This **was verified working on macOS 27.0 build 26A5425a**. The order is checked again when Spaces change. Other macOS builds may restrict the operation; the app reports failed pinning rather than claiming success. See [Spaces implementation](docs/Spaces.md).
 
+## Appearance and motion
+
+Settings → Appearance offers Leopard and **macOS 27 · Liquid Glass**. The modern theme uses Apple's current clear widget proportions, system typography, a month calendar, compact analog clock, six-day weather layout, and Music transport controls. Native `NSGlassEffectView` materials follow widget positions on macOS 26 and later; older supported systems use a visual-effect fallback. Widget preferences, calculator values, generated frames, and separate positions for each theme survive switching.
+
+Controls use centered vector symbols, visible keyboard focus, and readable foreground colors. Shelf, dialog, tile, and widget transitions respect Reduce Motion. Reduce Transparency and Increase Contrast use more opaque surfaces. AI generation receives the selected theme; existing generated widgets receive an appearance event without losing their state.
+
+A Dashboard Space covers the full display, including the strip beside a MacBook's camera housing. The real hardware notch remains visible; widgets crossing it are inset while the adjacent top corners remain usable. This uses a guarded, process-local AppKit override described in [Spaces implementation](docs/Spaces.md).
+
 ## Included widgets
 
 | Widget | Behavior |

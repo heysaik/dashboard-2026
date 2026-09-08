@@ -1,4 +1,5 @@
 #import <Foundation/Foundation.h>
+BOOL DSAllowFullDisplayContent(void);
 
 NS_ASSUME_NONNULL_BEGIN
 NSArray<NSDictionary *> *DSCopySpaces(void);

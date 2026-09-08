@@ -26,7 +26,7 @@ import AppKit
             try? await Task.sleep(nanoseconds: 300_000_000)
             if DSIsWindowSpaceFirst(UInt32(app.window.windowNumber)) {
                 enabled = true
-                UserDefaults.standard.set(true, forKey: "pinSpace")
+                if !app.isTest { UserDefaults.standard.set(true, forKey: "pinSpace") }
                 // Reattach the existing WebKit surface after a WindowServer Space
                 // move. On macOS 27, promoted fixed-position layers can otherwise
                 // retain their pre-move presentation until the surface is renewed.

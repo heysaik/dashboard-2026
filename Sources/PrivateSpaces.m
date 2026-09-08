@@ -1,10 +1,28 @@
 #import "PrivateSpaces.h"
+
 #import <dlfcn.h>
 #import <mach-o/dyld.h>
 #import <mach-o/loader.h>
 #import <mach-o/nlist.h>
 #import <objc/message.h>
 #import <objc/runtime.h>
+#import <string.h>
+
+// AppKit reserves a menu-bar-height strip even with fullSizeContentView on
+// camera-housing displays. This process-local hook opts our fullscreen content
+// out of that reservation; the system menu bar still auto-reveals normally.
+static BOOL DSReservesMenuBarSpace(id self, SEL command) { return NO; }
+BOOL DSAllowFullDisplayContent(void) {
+    Class controller = NSClassFromString(@"_NSFullScreenContentController");
+    SEL selector = NSSelectorFromString(@"reservesSpaceForMenuBarInFullScreen");
+    Method method = class_getInstanceMethod(controller, selector);
+    if (!method || method_getNumberOfArguments(method) != 2) return NO;
+    char returnType[16] = {0};
+    method_getReturnType(method, returnType, sizeof(returnType));
+    if (strcmp(returnType, @encode(BOOL)) != 0) return NO;
+    class_replaceMethod(controller, selector, (IMP)DSReservesMenuBarSpace, method_getTypeEncoding(method));
+    return YES;
+}
 
 // Runtime-only SPI. No addresses or OS-build offsets are hardcoded. The symbol
 // table technique and operation were researched against yabai and SkyLight's

@@ -48,6 +48,8 @@
 	<string>Show contacts you search for in the Address Book widget.</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSPrefersDisplaySafeAreaCompatibilityMode</key>
+	<false/>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

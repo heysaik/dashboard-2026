@@ -1,0 +1,195 @@
+/* Current Apple widget proportions and clear rendering, independent of Leopard. */
+.modern-only { display: none; }
+.clock-label { text-transform: uppercase; }
+.liquid .modern-only { display: block; }
+.liquid .classic-only,.liquid .classic-break { display: none; }
+.liquid .modern-icon { color: #fff; background: #ffffff1f; border: 1px solid #ffffff52; box-shadow: inset 0 1px #ffffff38; border-radius: 17px; }
+.liquid .widget {
+  --widget-foreground: #fff;
+  color: var(--widget-foreground);
+  filter: drop-shadow(0 5px 10px #0002);
+  border-radius: 22px;
+  cursor: grab;
+}
+.liquid .widget.dragging { filter: drop-shadow(0 12px 17px #0003); }
+.liquid .widget.dragging .widget-flipper { scale: 1; }
+.liquid .widget.entering { animation: current-widget-in 340ms cubic-bezier(.2,.8,.2,1); }
+.liquid .widget.removing { animation: current-widget-out 220ms ease-in forwards; }
+@keyframes current-widget-in { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+@keyframes current-widget-out { to { opacity: 0; transform: scale(.94); } }
+.liquid .widget-content > :is(.weather-face,.clock-face,.calendar-face,.calculator-face,.sticky-face,.dictionary-face,.converter-face,.stocks-face,.blue-face,.address-face,.tile-face,.music-face,.search-face,.flight-face,.sports-face,.ski-face,.movies-face,.webclip-face) {
+  height: 100%; border-radius: 22px; color: #fff; border: 1px solid #ffffff40;
+  background: #20252c38; box-shadow: inset 0 1px #ffffff0d; text-shadow: none;
+}
+.liquid:not(.native-glass) .widget-content > div { backdrop-filter: blur(24px) saturate(.8); background: #3a424abf; }
+.liquid .widget :is(h2,div,span,button,output) { font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+.liquid .widget :is(h2,p,div,span,button,output,input,textarea) { text-shadow: 0 1px 2px #0002; }
+.liquid .widget-info { width: 18px; height: 18px; color: #fff; background: #23282fd9; border: 1px solid #ffffff50; box-shadow: 0 1px 3px #0003; }
+.liquid .widget-close { width: 24px; height: 24px; background: #49505ddd; border: 1px solid #ffffffa6; box-shadow: 0 2px 4px #0003; }
+.liquid .widget-name { background: transparent; box-shadow: none; border: 0; color: #fff; font-size: 12px; font-weight: 500; text-shadow: 0 1px 3px #000a; }
+.liquid .widget-back { background: #303843f2; color: #fff; border: 1px solid #ffffff66; border-radius: 22px; box-shadow: inset 0 1px #ffffff26; }
+.liquid .widget-back h2 { font: 600 15px -apple-system,sans-serif; text-shadow: none; }
+.liquid .widget-back p { color: #e3e8ef; }
+.liquid .widget-back :is(input,select) { color: #f8faff; background: #ffffff16; border: 1px solid #ffffff4d; border-radius: 7px; }
+.liquid .widget-front :is(.silver-button,.classic-select) { color: #fff; background: #ffffff24; border: 1px solid #ffffff29; border-radius: 9px; text-shadow: none; box-shadow: none; }
+.liquid .widget-front .silver-button:hover { background: #ffffff38; }
+.liquid .widget-front input::placeholder,.liquid .widget-front textarea::placeholder { color: #ffffffbf; }
+.liquid .widget-front input { color: #fff; background: #ffffff14; border: 1px solid #ffffff40; box-shadow: none; }
+.liquid .widget-content > .weather-face { position: relative; }
+.liquid .weather-top { position: absolute; inset: 17px auto 17px 18px; width: 129px; height: auto; padding: 0; display: block; }
+.liquid .weather-place { position: static; text-align: left; margin: 0; max-width: 137px; font-size: 15px; font-weight: 600; line-height: 18px; }
+.liquid .weather-hi-lo { position: absolute; left: 0; bottom: 0; color: #fff; font-size: 12px; font-weight: 400; white-space: nowrap; }
+.liquid .weather-temp { position: absolute; top: 21px; left: -2px; margin: 0; font-size: 54px; line-height: 60px; font-weight: 300; letter-spacing: -2px; }
+.liquid .weather-top .weather-art { position: absolute; left: 0; top: 91px; width: 18px; height: 18px; }
+.liquid .weather-art :is(.sun,.moon) { width: 17px; height: 17px; box-shadow: none; background: #fff; }
+.liquid .weather-art .sun::after { display: none; }
+.liquid .weather-art .cloud { left: -1px; top: 0; transform: scale(.26); transform-origin: top left; }
+.liquid .weather-condition { position: absolute; top: 91px; left: 26px; max-width: 112px; font-size: 12px; font-weight: 500; line-height: 17px; }
+.liquid .forecast { position: absolute; top: 14px; right: 17px; left: 168px; bottom: 14px; height: auto; padding: 0; border: 0; background: transparent; display: flex; flex-direction: column; justify-content: space-between; }
+.liquid .forecast-day { display: grid; grid-template-columns: 38px 26px 1fr; gap: 7px; align-items: center; text-align: left; font-weight: 500; }
+.liquid .forecast-day .day { font-size: 11px; text-transform: capitalize; margin: 0; font-weight: 500; }
+.liquid .forecast-day .temp { font-size: 13px; font-weight: 600; margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.liquid .mini-weather { height: 20px; }
+.liquid .mini-weather .sun { width: 14px; height: 14px; background: #fff; box-shadow: none; }
+.liquid .mini-weather .sun::after { display: none; }
+.liquid .mini-weather .cloud { transform: scale(.27); box-shadow: none; }
+.liquid .weather-error { color: #fff; font-size: 13px; padding: 18px; }
+.liquid .clock-face { padding: 12px 17px 29px; }
+.liquid .clock-face svg { filter: none; }
+.liquid .clock-face svg > circle { fill: #ffffff16; stroke: none; }
+.liquid .clock-face svg > line { stroke: #ffffffe6; }
+.liquid .clock-face svg text { fill: #fff; font-family: -apple-system,sans-serif; font-size: 12px; font-weight: 500; }
+.liquid .clock-face :is(.hour,.minute) path { fill: #fff; }
+.liquid .clock-face .second line { stroke: #fff; stroke-width: .8; }
+.liquid .clock-face .second circle { fill: #fff; stroke: none; }
+.liquid .clock-label { bottom: 11px; font-size: 12px; line-height: 16px; font-weight: 600; color: #fff; text-transform: none; letter-spacing: 0; }
+.liquid .clock-period { display: none; }
+.liquid .calendar-face { display: block; padding: 16px 15px 13px; }
+.liquid .date-page { display: none; }
+.liquid .month-page { height: 100%; padding: 0; color: #fff; background: transparent; }
+.liquid .month-header { position: relative; font-size: 10px; line-height: 13px; color: #fff; font-weight: 600; justify-content: flex-start; margin: 0 0 8px; }
+.liquid .month-header .month-title { font-size: 10px; text-transform: uppercase; letter-spacing: .15px; }
+.liquid .month-header button { position: absolute; top: -2px; right: -4px; opacity: 0; width: 19px; height: 19px; color: #fff; }
+.liquid .month-header button:first-child { right: 17px; }
+.liquid .calendar-face:hover .month-header button,.liquid .calendar-face:focus-within .month-header button { opacity: 1; }
+.liquid .month-grid { grid-template-rows: repeat(7,16px); line-height: 16px; font-size: 10px; }
+.liquid .month-grid :is(button,.weekday) { font-size: 10px; font-weight: 500; color: #fff; }
+.liquid .month-grid button { width: 16px; height: 16px; justify-self: center; border-radius: 50%; }
+.liquid .month-grid button.today { background: #fff; color: #34383d; font-weight: 600; }
+.liquid .month-grid button.selected:not(.today) { background: #ffffff42; color: #fff; }
+.liquid .month-grid button:hover { background: #ffffff38; }
+.liquid .calculator-face { padding: 13px 11px; }
+.liquid .calc-display { height: 58px; margin: 0 0 10px; padding: 0 2px; border: 0; box-shadow: none; background: transparent; color: #fff; font-size: 38px; line-height: 1; font-weight: 300; }
+.liquid .calc-memory { display: none; }
+.liquid .modern-calc-controls { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 6px; margin-bottom: 7px; }
+.liquid .modern-calc-controls button,.liquid .calc-pad button { width: 31px; height: 34px; min-width: 0; border-radius: 50%; display: grid; place-items: center; padding: 0; color: #fff; border: 0; background: #ffffff29; font: 400 20px/1 -apple-system,sans-serif; box-shadow: none; text-shadow: none; }
+.liquid .modern-calc-controls button { font-size: 16px; background: #ffffff42; }
+.liquid .calc-pad { padding: 0; border: 0; background: transparent; gap: 7px 6px; grid-template-columns: repeat(4,minmax(0,1fr)); }
+.liquid .calc-pad button[data-key=c] { display: none; }
+.liquid .calc-pad button[data-key='0'] { grid-column: span 2; width: 100%; border-radius: 20px; justify-items: start; padding-left: 12px; }
+.liquid .calc-pad button:nth-child(4n),.liquid .modern-calc-controls button:last-child { background: #ffffff47; }
+.liquid .calc-pad button[data-key='='] { background: #fff; color: #383d44; border: 0; }
+.liquid .calc-pad button:active,.liquid .modern-calc-controls button:active { background: #ffffff66; scale: .94; }
+.liquid .sticky-face { transform: none; padding: 16px; }
+.liquid .sticky-face::after { display: none; }
+.liquid .sticky-face textarea { font-family: -apple-system,sans-serif !important; font-size: 14px !important; line-height: 1.45; color: #fff; scrollbar-width: thin; scrollbar-color: #ffffff60 transparent; }
+.liquid .dictionary-face { padding: 17px; }
+.liquid .dictionary-bar { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+.liquid .dictionary-title { font: 600 17px -apple-system,sans-serif; color: #fff; text-shadow: none; }
+.liquid .dictionary-bar input { height: 32px; border-radius: 8px; background: #ffffff14; border: 1px solid #ffffff2e; color: #fff; box-shadow: none; font-size: 14px; }
+.liquid .dictionary-result { color: #fff; background: transparent; margin-top: 8px; padding: 4px 0; max-height: calc(100% - 76px); border-radius: 0; font: 13px/1.5 -apple-system,sans-serif; }
+.liquid .converter-face { padding: 16px 18px; position: relative; }
+.liquid .widget-heading { color: #fff; text-align: left; font-size: 15px; font-weight: 600; margin: 0 0 13px; }
+.liquid .converter-type { position: absolute; top: 13px; right: 16px; width: 128px; margin: 0; }
+.liquid .convert-row { margin: 9px 0; gap: 12px; }
+.liquid .convert-row input { width: 135px; height: 33px; border: 0; background: #ffffff17; border-radius: 8px; color: #fff; box-shadow: none; font-size: 20px; padding: 4px 9px; }
+.liquid .convert-row .result { font-size: 18px; }
+.liquid .convert-row select { height: 33px; font-size: 12px; }
+.liquid .converter-footer { color: #fff; text-align: left; font-size: 10px; margin-top: 6px; }
+.liquid .stocks-face { padding: 13px 14px; }
+.liquid .stock-row { height: 37px; padding: 0 4px; background: transparent; border-bottom: 1px solid #ffffff26; border-radius: 0; font-size: 13px; }
+.liquid .stock-row.selected { background: #ffffff12; border-radius: 6px; }
+.liquid .stock-change { background: #ffffff1a; color: #fff; border: 0; font-size: 11px; font-weight: 500; min-width: 60px; border-radius: 5px; }
+.liquid .stock-change.negative { background: #ffffff1a; }
+.liquid .stock-range { margin-top: 10px; }
+.liquid .stock-range button { color: #fff; }
+.liquid .stock-range button.selected { background: #fff; color: #3b4148; }
+.liquid .stock-chart { height: 96px; padding: 9px 0 0; }
+.liquid .stock-status { color: #ffffffd9; font-size: 10px; padding-top: 6px; }
+.liquid .blue-face { padding: 18px; }
+.liquid .translation-area { height: 96px; border: 1px solid #ffffff24; border-radius: 10px; box-shadow: none; color: #fff; background: #ffffff12; font-size: 14px; }
+.liquid .translation-controls { font-size: 12px; }
+.liquid .translation-middle { margin: 10px 0; }
+.liquid .translate-status { font-size: 11px; color: #ffffffd9; }
+.liquid .address-face { padding: 19px; }
+.liquid .address-search { align-items: center; gap: 15px; }
+.liquid .address-avatar { width: 57px; height: 57px; border: 0; border-radius: 50%; background: #ffffff24; }
+.liquid .address-avatar svg { width: 40px; }
+.liquid .address-avatar svg :is(path,circle) { fill: #fff; }
+.liquid .address-fields input { height: 32px; color: #fff; background: #ffffff17; border: 1px solid #ffffff26; border-radius: 9px; box-shadow: none; font-size: 14px; }
+.liquid .address-fields strong { font-size: 13px; font-weight: 500; margin-top: 9px; }
+.liquid .contact-results { font-size: 12px; max-height: calc(100% - 70px); }
+.liquid .contact-result { border-color: #ffffff2e; }
+.liquid .contact-result p { color: #ffffffde; }
+.liquid .tile-face { padding: 8px; }
+.liquid .tile-board { border-radius: 15px; overflow: hidden; background: #ffffff1a; }
+.liquid .tile-board button { font: 500 17px -apple-system,sans-serif; background: #ffffff21; color: #fff; text-shadow: none; box-shadow: none; }
+.liquid .tile-board button.hole { background: #ffffff12; box-shadow: inset 0 1px 2px #0002; }
+.liquid .tile-status { color: #fff; font-size: 10px; margin-top: 7px; }
+.liquid .music-face { position: relative; padding: 17px; }
+.liquid .music-artwork { position: absolute; left: 17px; top: 17px; width: 74px; height: 74px; display: grid; place-items: center; border: 1px solid #ffffff2e; border-radius: 13px; background: #ffffff17; }
+.liquid .music-artwork .symbol { width: 34px; height: 34px; }
+.liquid .music-screen { position: absolute; left: 107px; right: 17px; top: 21px; height: 72px; border: 0; padding: 0; text-align: left; background: transparent; box-shadow: none; color: #fff; }
+.liquid .music-screen strong { font-size: 17px; font-weight: 600; margin-bottom: 7px; line-height: 21px; }
+.liquid .music-screen span { font-size: 12px; font-weight: 400; line-height: 17px; }
+.liquid .music-screen strong .modern-only { font-size: inherit; font-weight: inherit; }
+.liquid .music-wheel { position: absolute; left: 18px; right: 18px; bottom: 17px; width: auto; height: 37px; margin: 0; border: 0; background: transparent; box-shadow: none; display: flex; align-items: center; justify-content: center; gap: 36px; }
+.liquid .music-wheel :is(.prev,.next,.play) { position: static; color: #fff; width: 34px; height: 34px; padding: 4px; background: transparent; }
+.liquid .music-wheel .symbol { width: 24px; height: 24px; }
+.liquid .music-wheel .menu { display: none; }
+.liquid .music-wheel .center { position: static; width: auto; height: 34px; border-radius: 18px; padding: 0 17px; color: #fff; background: #ffffff26; border: 1px solid #ffffff26; font-size: 12px; }
+.liquid .music-face:not(.connected) .music-wheel :is(.prev,.next,.play),.liquid .music-face.connected .music-wheel .center { display: none; }
+.liquid .search-face { padding: 18px; }
+.liquid .search-face h2 { font: 600 18px -apple-system,sans-serif; text-align: left; color: #fff; margin: 0 0 16px; }
+.liquid .search-face h2 span { color: #fff !important; }
+.liquid .search-face input { height: 33px; border-radius: 9px; font-size: 14px; color: #fff; background: #ffffff1a; border: 1px solid #ffffff26; }
+.liquid .search-face .search-caption { text-align: left; font-size: 11px; color: #ffffffd9; margin-top: 12px; }
+.liquid .flight-face { padding: 18px; }
+.liquid .flight-plane { position: absolute; top: 16px; right: 19px; width: 23px; height: 23px; }
+.liquid .flight-plane .symbol { width: 23px; height: 23px; }
+.liquid .flight-face h2 { text-align: left; margin: 0 0 17px; font-size: 17px; }
+.liquid .flight-face form { display: flex; gap: 9px; }
+.liquid .flight-face input { min-width: 0; flex: 1; height: 33px; padding: 5px 8px; border-radius: 8px; font-size: 11px; color: #fff; background: #ffffff1a; border: 1px solid #ffffff26; }
+.liquid .flight-face button { margin: 0; font-size: 11px; }
+.liquid .flight-face p { text-align: left; color: #ffffffd9; font-size: 10px; margin-top: 13px; }
+.liquid .sports-face { padding: 15px 18px; }
+.liquid .sports-brand { background: transparent; box-shadow: none; color: #fff; font-size: 23px; margin: 0 0 15px; padding: 0; }
+.liquid .sports-face select { top: 17px; right: 18px; }
+.liquid .sports-results { height: 285px; }
+.liquid .score-game { padding: 12px 0; border-color: #ffffff26; }
+.liquid .score-status { color: #ffffffd9; font-size: 11px; }
+.liquid .score-team { font-size: 15px; }
+.liquid .score-team b { color: #fff; font: 600 22px -apple-system,sans-serif; }
+.liquid .ski-face { padding: 18px 15px; }
+.liquid .ski-face h2 { font-size: 13px; text-align: left; }
+.liquid .ski-temp { font-size: 54px; font-weight: 300; text-align: left; margin: 9px 0 16px; }
+.liquid .ski-data { background: transparent; border: 0; border-top: 1px solid #ffffff26; padding: 11px 0; font-size: 12px; line-height: 2; }
+.liquid .ski-note { font-size: 10px; line-height: 1.5; color: #ffffffd9; text-align: left; margin-top: 8px; }
+.liquid .movies-face { padding: 18px; }
+.liquid .movies-face h2 { color: #fff; text-align: left; font: 600 17px -apple-system,sans-serif; margin: 0 0 14px; }
+.liquid .movies-face input { height: 30px; color: #fff; background: #ffffff17; border: 1px solid #ffffff26; border-radius: 8px; padding: 4px 9px; font-size: 13px; }
+.liquid .movie-results { height: 258px; }
+.liquid .movie-result { font-size: 13px; color: #fff; border-color: #ffffff26; }
+.liquid .movie-result img { border-radius: 5px; box-shadow: none; }
+.liquid .movie-result small { color: #ffffffd9; font-size: 11px; }
+.liquid .webclip-face { padding: 11px; }
+.liquid .webclip-face .clip { border: 0; border-radius: 14px; background: #ffffff17; }
+.liquid .clip-placeholder { color: #fff; padding: 30px 18px; font-size: 13px; }
+.liquid .webclip-title { color: #fff; margin-top: 7px; }
+.liquid .webclip-title .silver-button { min-height: 24px; }
+.liquid .custom-widget .widget-front { background: #20252c38; border: 0; box-shadow: inset 0 0 0 1px #ffffff40; border-radius: 22px; }
+.liquid .custom-frame { border-radius: 21px; }
+.liquid .custom-widget .widget-info { right: -22px; }
+.liquid.reduce-transparency .widget-content > div,.liquid.increase-contrast .widget-content > div { background: #343c46; }
+.liquid.increase-contrast .widget-content > div { border-color: #fff; }
+.liquid .widget.refreshing .widget-flipper { animation: refresh-polished 380ms ease-out; }

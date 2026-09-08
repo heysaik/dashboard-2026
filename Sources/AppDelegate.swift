@@ -6,6 +6,10 @@ import WebKit
 final class DashboardWindow: NSWindow {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+        if styleMask.contains(.fullScreen) { return frameRect }
+        return super.constrainFrameRect(frameRect, to: screen)
+    }
 }
 
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
@@ -21,10 +25,13 @@ final class DashboardWindow: NSWindow {
     var pendingImports: [URL] = []
     var pinning: SpacePinning!
     var wallpaper: NSImageView!
+    var materials: DashboardMaterials!
+    var currentTexture = "leopard"
     var preparingToQuit = false
     var isTest: Bool { ProcessInfo.processInfo.arguments.contains("--smoke-test") }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        _ = DSAllowFullDisplayContent()
         do { bridge = try NativeBridge(app: self) }
         catch { NSAlert(error: error).runModal(); NSApp.terminate(nil); return }
         let configuration = WKWebViewConfiguration()
@@ -36,7 +43,7 @@ final class DashboardWindow: NSWindow {
         #if DEBUG
         webView.isInspectable = true
         #endif
-        let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        let screen = NSScreen.main?.frame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         window = DashboardWindow(contentRect: screen, styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
         window.title = "Dashboard 2026"
         window.titleVisibility = .hidden
@@ -45,16 +52,21 @@ final class DashboardWindow: NSWindow {
         window.minSize = NSSize(width: 800, height: 600)
         window.collectionBehavior = [.fullScreenPrimary]
         window.backgroundColor = NSColor(calibratedWhite: 0.20, alpha: 1)
-        let container = NSView(frame: screen)
+        let container = NSView(frame: NSRect(origin: .zero, size: screen.size))
         wallpaper = NSImageView(frame: container.bounds)
         wallpaper.imageScaling = .scaleAxesIndependently
         wallpaper.autoresizingMask = [.width, .height]
         container.addSubview(wallpaper)
+        materials = DashboardMaterials(frame: container.bounds)
+        materials.autoresizingMask = [.width, .height]
+        container.addSubview(materials)
         webView.frame = container.bounds
         webView.autoresizingMask = [.width, .height]
         container.addSubview(webView)
         window.contentView = container
         window.delegate = self
+        NotificationCenter.default.addObserver(self, selector: #selector(displayEnvironmentChanged), name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(displayEnvironmentChanged), name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil)
         pinning = SpacePinning(app: self)
         setAppearance("leopard")
         buildMenus()
@@ -129,7 +141,7 @@ final class DashboardWindow: NSWindow {
     @objc func showDashboard() {
         if let front = NSWorkspace.shared.frontmostApplication, front.bundleIdentifier != Bundle.main.bundleIdentifier { previousApp = front }
         window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
-        if overlay { window.alphaValue = 0; NSAnimationContext.runAnimationGroup { $0.duration = 0.22; window.animator().alphaValue = 1 } }
+        if overlay { window.alphaValue = 0; NSAnimationContext.runAnimationGroup { $0.duration = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0 : 0.22; window.animator().alphaValue = 1 } }
     }
     @objc func dismiss() {
         if overlay { NSAnimationContext.runAnimationGroup({ $0.duration = 0.18; window.animator().alphaValue = 0 }, completionHandler: { Task { @MainActor in self.window.orderOut(nil); self.window.alphaValue = 1 } }) }
@@ -145,7 +157,7 @@ final class DashboardWindow: NSWindow {
         webView.evaluateJavaScript("document.body.classList.remove('overlay-mode')", completionHandler: nil)
         showDashboard()
         if !window.styleMask.contains(.fullScreen) { window.toggleFullScreen(nil) }
-        UserDefaults.standard.set("space", forKey: "displayMode")
+        if !isTest { UserDefaults.standard.set("space", forKey: "displayMode") }
     }
     @objc func setOverlay() {
         if window.styleMask.contains(.fullScreen) {
@@ -161,12 +173,41 @@ final class DashboardWindow: NSWindow {
         window.backgroundColor = .clear
         if let screen = NSScreen.main { window.setFrame(screen.frame, display: true) }
         webView.evaluateJavaScript("document.body.classList.add('overlay-mode')", completionHandler: nil)
-        UserDefaults.standard.set("overlay", forKey: "displayMode")
+        if !isTest { UserDefaults.standard.set("overlay", forKey: "displayMode") }
         showDashboard()
+        publishEnvironment()
     }
-    func windowDidExitFullScreen(_ notification: Notification) { if overlay { setOverlay() } }
+    func windowDidExitFullScreen(_ notification: Notification) { if overlay { setOverlay() }; publishEnvironment() }
     func windowDidEnterFullScreen(_ notification: Notification) {
-        Task { @MainActor in _ = await pinning.pin() }
+        fillScreen()
+        Task { @MainActor in _ = await pinning.pin(); fillScreen() }
+    }
+    func window(_ window: NSWindow, willUseFullScreenContentSize proposedSize: NSSize) -> NSSize { (window.screen ?? NSScreen.main)?.frame.size ?? proposedSize }
+    func window(_ window: NSWindow, willUseFullScreenPresentationOptions proposedOptions: NSApplication.PresentationOptions) -> NSApplication.PresentationOptions { [.fullScreen, .autoHideMenuBar, .autoHideDock] }
+    func windowDidChangeScreen(_ notification: Notification) { fillScreen(); setAppearance(currentTexture) }
+    func windowDidResize(_ notification: Notification) { publishEnvironment() }
+    @objc func displayEnvironmentChanged() { fillScreen(); publishEnvironment() }
+    func fillScreen() {
+        guard window != nil, window.styleMask.contains(.fullScreen), let screen = window.screen ?? NSScreen.main else { return }
+        if window.frame != screen.frame { window.setFrame(screen.frame, display: true) }
+        publishEnvironment()
+    }
+    func environment() -> [String: Any] {
+        let screen = window.screen ?? NSScreen.main
+        let full = window.styleMask.contains(.fullScreen) || overlay
+        let left = screen?.auxiliaryTopLeftArea, right = screen?.auxiliaryTopRightArea
+        let notchWidth = (left != nil && right != nil) ? max(0, right!.minX - left!.maxX) : 0
+        return ["safeTop": full ? screen?.safeAreaInsets.top ?? 0 : 24,
+                "notchLeft": full && notchWidth > 0 ? left!.maxX - (screen?.frame.minX ?? 0) : 0,
+                "notchWidth": full ? notchWidth : 0,
+                "reduceMotion": NSWorkspace.shared.accessibilityDisplayShouldReduceMotion,
+                "reduceTransparency": NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency,
+                "increaseContrast": NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast,
+                "nativeGlass": DashboardMaterials.supportsGlass]
+    }
+    func publishEnvironment() {
+        guard bridge?.loaded == true, let data = try? JSONSerialization.data(withJSONObject: environment()), let json = String(data: data, encoding: .utf8) else { return }
+        webView.evaluateJavaScript("window.Dashboard?.setEnvironment(\(json))", completionHandler: nil)
     }
     @objc func pinSpace() {
         if !window.styleMask.contains(.fullScreen) { setSpace(); return }
@@ -178,7 +219,9 @@ final class DashboardWindow: NSWindow {
         }
     }
     func setAppearance(_ texture: String) {
-        if texture == "leopard", let screen = window?.screen ?? NSScreen.main, let url = NSWorkspace.shared.desktopImageURL(for: screen), let image = NSImage(contentsOf: url) { wallpaper.image = image }
+        currentTexture = texture
+        materials.isHidden = texture != "liquid"
+        if ["leopard", "liquid"].contains(texture), let screen = window?.screen ?? NSScreen.main, let url = NSWorkspace.shared.desktopImageURL(for: screen), let image = NSImage(contentsOf: url) { wallpaper.image = image }
         else { wallpaper.image = nil }
     }
     func windowShouldClose(_ sender: NSWindow) -> Bool { dismiss(); return false }

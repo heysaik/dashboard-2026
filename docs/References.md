@@ -9,6 +9,13 @@ The requested target is **Mac OS X Leopard (10.5)**. The project adds a dedicate
 - [512 Pixels: Snow Leopard screenshots](https://512pixels.net/projects/aqua-screenshot-library/mac-os-x-10-6-snow-leopard/) — closely related overlay and shelf visual reference. Used with the Apple documentation to study the retained Leopard-era widgets; not claimed to be a Leopard screenshot.
 - [Apple Dashboard overview](https://www.apple.com/sg/pro/photo/dashboard.html) — original widget collection.
 
+The optional modern theme uses current Apple widget layouts and clear rendering, with independent implementations for the legacy utilities:
+
+- [Apple's current widget illustration](https://www.apple.com/lv/macbook-pro/images/overview/os_liquid_large.png) — clear calendar, reminders, and world-clock widgets, white content, padding, and corner proportions.
+- [Apple's widget design guidance](https://developer.apple.com/design/human-interface-guidelines/widgets) and [materials guidance](https://developer.apple.com/design/human-interface-guidelines/materials).
+- [macOS 27](https://www.apple.com/os/macos/) — current platform design reference.
+- [Full-display compatibility preference](https://developer.apple.com/documentation/bundleresources/information-property-list/nsprefersdisplaysafeareacompatibilitymode).
+
 Reference images downloaded for local comparison are excluded from Git and the app bundle.
 
 # Data and AI integration

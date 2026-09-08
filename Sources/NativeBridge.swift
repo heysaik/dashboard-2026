@@ -24,6 +24,8 @@ import WebKit
     func handle(_ action: String, _ data: [String: Any]) async throws -> Any {
         switch action {
         case "load": return try store.read()
+        case "environment": return app.environment()
+        case "materials": app.materials.update(data); return true
         case "save": try store.write(data); return true
         case "fetch": return try await network.fetch(data["url"] as? String ?? "")
         case "dismiss": app.dismiss(); return true
@@ -42,7 +44,7 @@ import WebKit
         case "music": return try music(data["command"] as? String ?? "status")
         case "providers": return await generator.providers(endpoint: data["endpoint"] as? String ?? "http://127.0.0.1:1234/v1")
         case "generate", "translate":
-            let raw = try await generator.generate(prompt: data["prompt"] as? String ?? "", provider: data["provider"] as? String ?? "codex", endpoint: data["endpoint"] as? String ?? "http://127.0.0.1:1234/v1", model: data["model"] as? String ?? "", widget: action == "generate")
+            let raw = try await generator.generate(prompt: data["prompt"] as? String ?? "", provider: data["provider"] as? String ?? "codex", endpoint: data["endpoint"] as? String ?? "http://127.0.0.1:1234/v1", model: data["model"] as? String ?? "", widget: action == "generate", theme: data["theme"] as? String ?? "leopard")
             if action == "translate" { return raw }
             return try JSONSerialization.jsonObject(with: JSONEncoder().encode(WidgetManifest.parse(raw)))
         case "cancel": generator.cancel(); return true
@@ -60,7 +62,7 @@ import WebKit
         default: throw DashboardError.message("Unknown Dashboard action.")
         }
     }
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { loaded = true; consumeImports() }
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { loaded = true; consumeImports(); app.publishEnvironment() }
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         if navigationAction.targetFrame?.isMainFrame == false { decisionHandler(.allow); return }
         if navigationAction.request.url?.scheme == "dashboard" { decisionHandler(.allow) }
