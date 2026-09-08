@@ -16,6 +16,8 @@ Verified on September 8, 2026, on an Apple Silicon Mac running macOS 27.0, build
 - Login registration for the installed app was confirmed enabled and allowed in macOS's background item records.
 - A universal Release ZIP was built and its SHA-256 checksum written alongside it. The installed app and package are ad-hoc signed.
 
+The September 8 material refinement was also built and visually checked in both themes. The modern wallpaper blur, native SF Symbols, compact toolbar, and neutral Settings surfaces were inspected. The Leopard shelf's label area and weather, clock, calculator, and note thumbnails were checked at their actual size. All six core tests and 27 integration checks passed again, including full-display sizing and Space pinning.
+
 Automated tests use a separate `DASHBOARD_DATA_DIR`, preserving the installed app's layout. Raw diagnostic results and screenshots stay in the ignored `artifacts/` folder because screenshots may include the user's desktop picture.
 
 ## Limits

@@ -2,12 +2,15 @@
 .modern-only { display: none; }
 .clock-label { text-transform: uppercase; }
 .liquid .modern-only { display: block; }
+.system-symbol { display: none; }
+.liquid .has-system-symbol .drawn-symbol { display: none; }
+.liquid .has-system-symbol .system-symbol { display: block; }
 .liquid .classic-only,.liquid .classic-break { display: none; }
-.liquid .modern-icon { color: #fff; background: #ffffff1f; border: 1px solid #ffffff52; box-shadow: inset 0 1px #ffffff38; border-radius: 17px; }
+.liquid .modern-icon { color: #fff; background: #ffffff0d; border: 0; box-shadow: none; border-radius: 14px; }
 .liquid .widget {
   --widget-foreground: #fff;
   color: var(--widget-foreground);
-  filter: drop-shadow(0 5px 10px #0002);
+  filter: none;
   border-radius: 22px;
   cursor: grab;
 }
@@ -18,16 +21,16 @@
 @keyframes current-widget-in { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
 @keyframes current-widget-out { to { opacity: 0; transform: scale(.94); } }
 .liquid .widget-content > :is(.weather-face,.clock-face,.calendar-face,.calculator-face,.sticky-face,.dictionary-face,.converter-face,.stocks-face,.blue-face,.address-face,.tile-face,.music-face,.search-face,.flight-face,.sports-face,.ski-face,.movies-face,.webclip-face) {
-  height: 100%; border-radius: 22px; color: #fff; border: 1px solid #ffffff40;
-  background: #20252c38; box-shadow: inset 0 1px #ffffff0d; text-shadow: none;
+  height: 100%; border-radius: 22px; color: #fff; border: 1px solid transparent;
+  background: #0000000a; box-shadow: none; text-shadow: none;
 }
 .liquid:not(.native-glass) .widget-content > div { backdrop-filter: blur(24px) saturate(.8); background: #3a424abf; }
 .liquid .widget :is(h2,div,span,button,output) { font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
-.liquid .widget :is(h2,p,div,span,button,output,input,textarea) { text-shadow: 0 1px 2px #0002; }
+.liquid .widget :is(h2,p,div,span,button,output,input,textarea) { text-shadow: none; }
 .liquid .widget-info { width: 18px; height: 18px; color: #fff; background: #23282fd9; border: 1px solid #ffffff50; box-shadow: 0 1px 3px #0003; }
 .liquid .widget-close { width: 24px; height: 24px; background: #49505ddd; border: 1px solid #ffffffa6; box-shadow: 0 2px 4px #0003; }
 .liquid .widget-name { background: transparent; box-shadow: none; border: 0; color: #fff; font-size: 12px; font-weight: 500; text-shadow: 0 1px 3px #000a; }
-.liquid .widget-back { background: #303843f2; color: #fff; border: 1px solid #ffffff66; border-radius: 22px; box-shadow: inset 0 1px #ffffff26; }
+.liquid .widget-back { background: #2c2c2ef2; color: #fff; border: 1px solid #ffffff26; border-radius: 22px; box-shadow: none; }
 .liquid .widget-back h2 { font: 600 15px -apple-system,sans-serif; text-shadow: none; }
 .liquid .widget-back p { color: #e3e8ef; }
 .liquid .widget-back :is(input,select) { color: #f8faff; background: #ffffff16; border: 1px solid #ffffff4d; border-radius: 7px; }
@@ -187,7 +190,7 @@
 .liquid .clip-placeholder { color: #fff; padding: 30px 18px; font-size: 13px; }
 .liquid .webclip-title { color: #fff; margin-top: 7px; }
 .liquid .webclip-title .silver-button { min-height: 24px; }
-.liquid .custom-widget .widget-front { background: #20252c38; border: 0; box-shadow: inset 0 0 0 1px #ffffff40; border-radius: 22px; }
+.liquid .custom-widget .widget-front { background: #0000000a; border: 0; box-shadow: none; border-radius: 22px; }
 .liquid .custom-frame { border-radius: 21px; }
 .liquid .custom-widget .widget-info { right: -22px; }
 .liquid.reduce-transparency .widget-content > div,.liquid.increase-contrast .widget-content > div { background: #343c46; }

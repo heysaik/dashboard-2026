@@ -1,118 +1,92 @@
-/* macOS 27: native glass for navigation, quiet frosted surfaces for content. */
+/* Native materials supply the glass; WebKit supplies only content and controls. */
 body.liquid {
-  --ink: #182638;
-  --secondary: #485c72;
-  --accent: #1268d7;
-  --panel: linear-gradient(145deg,rgba(252,254,255,.96),rgba(224,235,245,.9));
-  --panel-border: 1px solid rgba(255,255,255,.82);
-  --panel-shadow: inset 0 1px 0 #fff, inset 0 -1px 0 #647d9726;
-  --shell: linear-gradient(140deg,rgba(45,59,78,.94),rgba(23,35,52,.92));
-  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  --ink: #f5f5f7;
+  --secondary: #ffffffb8;
+  --shell: #242426e8;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   background: transparent;
-  color: #f7faff;
+  color: #fff;
 }
-.liquid #dashboard { background: linear-gradient(140deg,#11203918,#1724340a 45%,#11243e2e); box-shadow: none; }
-.liquid.overlay-mode #dashboard { background: #17263d35; }
+.liquid #dashboard { background: #00000024; box-shadow: none; }
+.liquid.overlay-mode #dashboard { background: #00000038; backdrop-filter: blur(10px); }
 .liquid :is(#controls,#right-controls) {
-  gap: 4px; padding: 5px; height: 52px; border-radius: 28px;
-  border: 1px solid #ffffff6b; background: var(--shell);
-  box-shadow: inset 0 1px 0 #ffffff4d, inset 0 -1px 0 #ffffff12, 0 7px 26px #07152e40;
-  backdrop-filter: blur(28px) saturate(1.5);
+  gap: 2px; padding: 4px; height: 42px; border-radius: 21px;
+  border: 1px solid #ffffff26; background: #242426bf;
+  box-shadow: 0 3px 12px #0002; backdrop-filter: blur(28px);
 }
-.liquid.native-glass :is(#controls,#right-controls,#shelf) { background: rgba(17,31,49,.76); backdrop-filter: none; }
-.liquid .round-control {
-  width: 40px; height: 40px; color: #fff; border: 0; box-shadow: none; background: transparent; text-shadow: none;
-}
-.liquid .round-control .symbol { width: 20px; height: 20px; stroke-width: 1.9; }
-.liquid .round-control:hover { background: #ffffff24; }
-.liquid .round-control:active { background: #ffffff38; scale: .91; }
-.liquid .glass-button { height: 40px; min-height: 40px; padding: 0 15px; border: 0; border-radius: 21px; box-shadow: none; background: transparent; color: #fff; text-shadow: none; font-size: 13px; font-weight: 550; letter-spacing: -.1px; }
-.liquid .glass-button:hover { background: #ffffff20; }
-.liquid .glass-button:active { background: #ffffff30; filter: none; scale: .97; }
-.liquid .studio-spark { color: #fff; }
-.liquid #studio-button { border-right: 1px solid #ffffff24; border-top-right-radius: 7px; border-bottom-right-radius: 7px; }
+.liquid.native-glass :is(#controls,#right-controls) { border: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
+.liquid .round-control { width: 34px; height: 34px; color: #fff; border: 0; box-shadow: none; background: transparent; text-shadow: none; }
+.liquid .round-control .symbol { width: 21px; height: 21px; }
+.liquid .round-control:hover { background: #ffffff14; }
+.liquid .round-control:active { background: #ffffff24; scale: .96; }
+.liquid .glass-button { height: 34px; min-height: 34px; padding: 0 12px; border: 0; border-radius: 17px; box-shadow: none; background: transparent; color: #fff; text-shadow: none; font-size: 13px; font-weight: 400; letter-spacing: 0; }
+.liquid .glass-button:hover { background: #ffffff14; }
+.liquid .glass-button:active { background: #ffffff24; filter: none; scale: .98; }
+.liquid #studio-button { padding-left: 14px; padding-right: 14px; }
+.liquid #studio-button .studio-spark { display: none; }
 .liquid #shelf {
-  left: 24px; right: 24px; bottom: 14px; height: 187px; border-radius: 28px;
-  border: 1px solid #ffffff66; background: var(--shell); color: #fff;
-  box-shadow: inset 0 1px 0 #ffffff45, 0 12px 44px #081b3855;
-  backdrop-filter: blur(35px) saturate(1.4); overflow: hidden;
+  left: 24px; right: 24px; bottom: 14px; height: 187px; border-radius: 22px;
+  border: 1px solid #ffffff26; background: #242426dc; color: #fff;
+  box-shadow: 0 6px 20px #0002; backdrop-filter: blur(30px); overflow: hidden;
 }
-.liquid.shelf-open :is(#controls,#right-controls) { bottom: 219px; }
-.liquid .shelf-header { height: 43px; border-bottom: 1px solid #ffffff18; background: transparent; }
-.liquid .shelf-header input { width: 238px; height: 29px; background: #ffffff1c; color: #fff; box-shadow: inset 0 1px 2px #0001; border: 1px solid #ffffff32; border-radius: 16px; padding: 0 14px; }
-.liquid .shelf-header input::placeholder { color: #e1e9f4; }
-.liquid #catalog { scrollbar-color: #d7e6ff55 transparent; }
-.liquid .catalog-item { color: #fff; font-weight: 500; text-shadow: 0 1px 3px #09172580; }
-.liquid .catalog-icon { filter: drop-shadow(0 3px 5px #06112330); }
-.liquid .catalog-item:hover .catalog-icon { filter: drop-shadow(0 6px 8px #06112350); }
-.liquid .catalog-empty { color: #f2f6ff; }
-.modern-icon {
-  width: 62px; height: 62px; display: grid; place-items: center; border-radius: 18px;
-  color: #fff; background: linear-gradient(145deg,#78a9ff,#396dda);
-  border: 1px solid #ffffff80; box-shadow: inset 0 1px 0 #ffffff8c,inset 0 -2px 3px #173e8826;
+.liquid.native-glass #shelf { border: 0; background: #18181a30; box-shadow: none; backdrop-filter: none; }
+.liquid.shelf-open :is(#controls,#right-controls) { bottom: 217px; }
+.liquid .shelf-header { height: 43px; border-bottom: 1px solid #ffffff12; background: transparent; }
+.liquid .shelf-header input { width: 238px; height: 28px; background: #ffffff12; color: #fff; box-shadow: none; border: 0; border-radius: 7px; padding: 0 10px; }
+.liquid .shelf-header input::placeholder { color: #ffffffb8; }
+.liquid #catalog { scrollbar-color: #ffffff40 transparent; }
+.liquid .catalog-item { color: #fff; font-weight: 400; text-shadow: none; }
+.liquid .catalog-icon { filter: none; }
+.liquid .catalog-item:hover .catalog-icon { filter: none; }
+.liquid .catalog-empty { color: #fff; }
+.modern-icon { width: 62px; height: 62px; display: grid; place-items: center; color: #fff; }
+.modern-icon .symbol { width: 40px; height: 40px; }
+.liquid .silver-button,.liquid .aqua-button {
+  min-height: 28px; display: inline-flex; align-items: center; justify-content: center; padding: 4px 12px;
+  border-radius: 7px; border: 0; background: #ffffff1f; color: #fff;
+  font-size: 12px; font-weight: 400; text-shadow: none; box-shadow: none;
 }
-.modern-icon .symbol { width: 33px; height: 33px; stroke-width: 1.5; }
-.modern-weather { background: linear-gradient(140deg,#70c9ff,#278af0); color: #fff1a4; }
-.modern-clock,.modern-calendar,.modern-calculator,.modern-converter,.modern-webclip { background: linear-gradient(140deg,#ffffffed,#d2deefda); color: #293e57; }
-.modern-calendar { color: #ec514f; }
-.modern-stickies,.modern-business { background: linear-gradient(140deg,#ffe99d,#efbf52); color: #624413; }
-.modern-dictionary,.modern-movies { background: linear-gradient(140deg,#b9a3f5,#785bd3); }
-.modern-stocks,.modern-ski { background: linear-gradient(140deg,#82dbc9,#289c8c); }
-.modern-currency { background: linear-gradient(140deg,#84d796,#39a86b); }
-.modern-music,.modern-sports { background: linear-gradient(140deg,#ff989e,#e04d69); }
-.modern-contacts,.modern-people { background: linear-gradient(140deg,#d6b994,#a87e59); }
-.modern-tilegame { background: linear-gradient(140deg,#aaca91,#699770); }
-.liquid .silver-button, .liquid .aqua-button {
-  min-height: 28px; display: inline-flex; align-items: center; justify-content: center; padding: 4px 13px;
-  border-radius: 16px; border: 1px solid #ffffff33; background: #ffffff24; color: #fff;
-  font-size: 12px; font-weight: 550; text-shadow: none; box-shadow: inset 0 1px 0 #ffffff1a;
-}
-.liquid .silver-button:hover { background: #ffffff2e; }
-.liquid .silver-button:active, .liquid .aqua-button:active { scale: .96; filter: none; }
-.liquid .aqua-button { min-height: 34px; border-color: #91c4ff99; background: linear-gradient(#2888fa,#1269df); color: #fff; box-shadow: inset 0 1px #ffffff4d,0 3px 8px #00469930; }
-.liquid .aqua-button:hover { background: #358cf5; }
-.liquid .widget-front .silver-button { color: #124b91; background: #ffffffb3; border-color: #43699233; }
-.liquid .classic-select { color: var(--ink); background: #ffffffb3; border: 1px solid #6d849930; border-radius: 8px; font-family: inherit; }
-.liquid #modal-layer { background: #0915272b; backdrop-filter: none; }
-.liquid .dialog { background: var(--shell); color: #f7faff; border: 1px solid #ffffff66; border-radius: 28px; box-shadow: inset 0 1px #ffffff4d,0 25px 80px #06152b66; backdrop-filter: blur(45px) saturate(1.4); }
-.liquid .dialog-titlebar { padding: 21px 25px 16px; border-bottom: 1px solid #ffffff1c; box-shadow: none; background: transparent; }
-.liquid .dialog-titlebar h1 { color: #fff; font-size: 21px; font-weight: 600; letter-spacing: -.5px; text-shadow: none; }
-.liquid .dialog-close { color: #f1f6ff; background: #ffffff24; border: 1px solid #ffffff26; box-shadow: none; width: 28px; height: 28px; }
-.liquid .dialog-close:hover { background: #ffffff3d; }
-.liquid .dialog-body { padding: 23px 25px; }
-.liquid :is(.studio-form p,.settings-form p,.provider-status,.dialog-footer) { color: #e0e9f5; }
-.liquid :is(.studio-form label,.settings-form label) { font-size: 13px; }
-.liquid :is(.studio-form select,.studio-form input,.studio-form textarea,.settings-form select,.settings-form input[type=text]) { background: #16263c73; color: #fff; border: 1px solid #ffffff3d; border-radius: 11px; box-shadow: inset 0 1px 2px #0001; padding: 8px 10px; font-size: 13px; }
-.liquid :is(.studio-form input,.studio-form textarea,.settings-form input)::placeholder { color: #becfe2; }
-.liquid .studio-form textarea { padding: 12px; border-radius: 14px; }
-.liquid .settings-form h2 { font-size: 15px; margin-bottom: 14px; letter-spacing: -.15px; }
-.liquid .settings-form hr { border-color: #ffffff24; margin: 23px 0; }
-.liquid .theme-choice { color: #eaf2fc; background: #ffffff0d; border-radius: 17px; }
-.liquid .theme-choice:hover { background: #ffffff1a; }
-.liquid .theme-choice[aria-checked=true] { color: #fff; background: #549cfb30; border-color: #9bc9ff; }
-.liquid .theme-art { border-radius: 10px; }
-.liquid .studio-preview { background: radial-gradient(ellipse at 25% 20%,#89b9d330,transparent 65%),#101d3166; box-shadow: inset 0 0 0 1px #ffffff26; border-radius: 20px; }
-.liquid .preview-empty { color: #dae7f5; text-shadow: none; }
+.liquid .silver-button:hover { background: #ffffff2b; }
+.liquid .silver-button:active,.liquid .aqua-button:active { scale: .98; filter: none; }
+.liquid .aqua-button { min-height: 32px; background: #0a84ff; font-weight: 500; }
+.liquid .aqua-button:hover { background: #2994ff; }
+.liquid .classic-select { color: #fff; background: #ffffff14; border: 1px solid #ffffff1a; border-radius: 6px; font-family: inherit; }
+.liquid #modal-layer { background: #00000026; backdrop-filter: none; }
+.liquid .dialog { background: var(--shell); color: #fff; border: 1px solid #ffffff26; border-radius: 20px; box-shadow: 0 14px 50px #0003; backdrop-filter: blur(28px); }
+.liquid.native-glass .dialog { border-color: transparent; box-shadow: none; }
+.liquid .dialog-titlebar { padding: 19px 22px 16px; border-bottom: 1px solid #ffffff14; box-shadow: none; background: transparent; }
+.liquid .dialog-titlebar h1 { color: #fff; font-size: 19px; font-weight: 600; letter-spacing: 0; text-shadow: none; }
+.liquid .dialog-close { color: #fff; background: #ffffff14; border: 0; box-shadow: none; width: 26px; height: 26px; }
+.liquid .dialog-close:hover { background: #ffffff24; }
+.liquid .dialog-body { padding: 22px; }
+.liquid :is(.studio-form p,.settings-form p,.provider-status,.dialog-footer) { color: #ffffffc7; }
+.liquid :is(.studio-form label,.settings-form label) { font-size: 13px; font-weight: 400; }
+.liquid :is(.studio-form select,.studio-form input,.studio-form textarea,.settings-form select,.settings-form input[type=text]) { background: #ffffff0d; color: #fff; border: 1px solid #ffffff26; border-radius: 6px; box-shadow: none; padding: 8px 10px; font-size: 13px; }
+.liquid :is(.studio-form input,.studio-form textarea,.settings-form input)::placeholder { color: #ffffff99; }
+.liquid .studio-form textarea { padding: 11px; border-radius: 8px; }
+.liquid .settings-form h2 { font-size: 13px; margin-bottom: 12px; letter-spacing: 0; font-weight: 600; }
+.liquid .settings-form hr { border-color: #ffffff1a; margin: 22px 0; }
+.liquid .theme-picker { background: #ffffff0d; border: 0; }
+.liquid .theme-choice { color: #ffffffb8; background: transparent; border-radius: 4px; }
+.liquid .theme-choice:hover { background: #ffffff0a; }
+.liquid .theme-choice[aria-checked=true] { color: #fff; background: #ffffff24; box-shadow: 0 1px 3px #0002; }
+.liquid .studio-preview { background: #00000026; box-shadow: none; border-radius: 12px; }
+.liquid .preview-empty { color: #ffffffc7; text-shadow: none; }
 .liquid .preview-empty svg { opacity: 1; }
-.liquid .preview-empty svg :is(path,rect) { stroke: #afc9e8; }
-.liquid .preview-caption { color: #d9e6f6; }
-.liquid .studio-progress { color: #bdddff; }
-.liquid .studio-error { color: #ffcac8; background: #661e2633; border-radius: 10px; padding: 10px; }
-.liquid .spinner { border-color: #a9d1ff40; border-top-color: #c8e4ff; }
-.liquid .dialog-footer { background: #ffffff08; border-color: #ffffff24; padding: 15px 25px; }
-.liquid .manage-list { border: 1px solid #ffffff30; background: #ffffff08; border-radius: 14px; }
-.liquid .manage-row { border-color: #ffffff18; padding: 11px 13px; }
-.liquid .manage-row span { color: #d0e0f2; }
-.liquid .manage-list + p { color: #e0e9f5 !important; }
-.liquid #toast { background: #263d59f5; color: #fff; border: 1px solid #ffffff73; border-radius: 19px; padding: 13px 20px; box-shadow: 0 7px 26px #07152e40; font-size: 13px; }
-.liquid .ripple { border-color: #fff7; border-radius: 28px; box-shadow: 0 0 12px #d1eaff80,inset 0 0 6px #fff3; animation-duration: 650ms; }
-.liquid .new-widget-icon { background: #29405a99; border: 1px solid #ffffff80; border-radius: 23px; backdrop-filter: blur(18px); }
-.liquid.reduce-transparency { --panel: #eff4fa; --shell: #273b54; }
-.liquid.reduce-transparency :is(#controls,#right-controls,#shelf,.dialog) { background: #273b54; backdrop-filter: none; }
-.liquid.reduce-transparency .widget-content > .weather-face { background: #285985; }
-.liquid.reduce-transparency .widget-content > .stocks-face { background: #243e5d; }
-.liquid.increase-contrast { --panel-border: 1px solid #60778c; --secondary: #263c55; }
-.liquid.increase-contrast :is(#controls,#right-controls,#shelf,.dialog) { background: #20324b; border-color: #e3edfa; }
-.liquid.increase-contrast .widget-info { border: 1px solid #183754; }
-@media (max-width: 900px) { .liquid #shelf { left: 15px; right: 15px; } .liquid .glass-button { padding: 0 11px; font-size: 12px; } }
+.liquid .preview-empty svg :is(path,rect) { stroke: #ffffffa6; }
+.liquid .preview-caption { color: #ffffffc7; }
+.liquid .studio-progress { color: #fff; }
+.liquid .studio-error { color: #ffb4af; background: #ff453a14; border-radius: 6px; padding: 10px; }
+.liquid .spinner { border-color: #ffffff30; border-top-color: #fff; }
+.liquid .dialog-footer { background: transparent; border-color: #ffffff14; padding: 15px 22px; }
+.liquid .manage-list { border: 1px solid #ffffff1a; background: #ffffff05; border-radius: 9px; }
+.liquid .manage-row { border-color: #ffffff12; padding: 11px 13px; }
+.liquid .manage-row span { color: #ffffffb8; }
+.liquid .manage-list + p { color: #ffffffc7 !important; }
+.liquid #toast { background: #29292cf2; color: #fff; border: 1px solid #ffffff26; border-radius: 12px; padding: 12px 18px; box-shadow: 0 3px 12px #0002; font-size: 13px; }
+.liquid .ripple { border: 0; border-radius: 22px; box-shadow: 0 0 0 1px #ffffff30; animation-duration: 500ms; }
+.liquid .new-widget-icon { background: #303034aa; border: 0; border-radius: 22px; backdrop-filter: blur(20px); }
+.liquid.reduce-transparency :is(#controls,#right-controls,#shelf,.dialog) { background: #29292c; backdrop-filter: none; }
+.liquid.increase-contrast :is(#controls,#right-controls,#shelf,.dialog) { background: #242426; border: 1px solid #ffffff80; }
+@media (max-width: 900px) { .liquid #shelf { left: 15px; right: 15px; } .liquid .glass-button { padding: 0 10px; } }

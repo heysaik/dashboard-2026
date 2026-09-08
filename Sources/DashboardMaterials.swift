@@ -24,7 +24,7 @@ import AppKit
                     let glass = NSGlassEffectView()
                     glass.style = item["kind"] as? String == "widget" ? .clear : .regular
                     glass.appearance = NSAppearance(named: .darkAqua)
-                    glass.tintColor = item["kind"] as? String == "widget" ? nil : NSColor(calibratedRed: 0.24, green: 0.30, blue: 0.40, alpha: 0.18)
+                    glass.tintColor = nil
                     view = glass
                 } else {
                     let effect = NSVisualEffectView()

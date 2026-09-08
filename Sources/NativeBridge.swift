@@ -25,6 +25,7 @@ import WebKit
         switch action {
         case "load": return try store.read()
         case "environment": return app.environment()
+        case "symbols": return DashboardSymbols.images
         case "materials": app.materials.update(data); return true
         case "save": try store.write(data); return true
         case "fetch": return try await network.fetch(data["url"] as? String ?? "")

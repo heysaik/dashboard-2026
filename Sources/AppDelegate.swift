@@ -24,7 +24,7 @@ final class DashboardWindow: NSWindow {
     var overlay = false
     var pendingImports: [URL] = []
     var pinning: SpacePinning!
-    var wallpaper: NSImageView!
+    var wallpaper: DashboardWallpaper!
     var materials: DashboardMaterials!
     var currentTexture = "leopard"
     var preparingToQuit = false
@@ -53,7 +53,7 @@ final class DashboardWindow: NSWindow {
         window.collectionBehavior = [.fullScreenPrimary]
         window.backgroundColor = NSColor(calibratedWhite: 0.20, alpha: 1)
         let container = NSView(frame: NSRect(origin: .zero, size: screen.size))
-        wallpaper = NSImageView(frame: container.bounds)
+        wallpaper = DashboardWallpaper(frame: container.bounds)
         wallpaper.imageScaling = .scaleAxesIndependently
         wallpaper.autoresizingMask = [.width, .height]
         container.addSubview(wallpaper)
@@ -221,7 +221,9 @@ final class DashboardWindow: NSWindow {
     func setAppearance(_ texture: String) {
         currentTexture = texture
         materials.isHidden = texture != "liquid"
-        if ["leopard", "liquid"].contains(texture), let screen = window?.screen ?? NSScreen.main, let url = NSWorkspace.shared.desktopImageURL(for: screen), let image = NSImage(contentsOf: url) { wallpaper.image = image }
+        if ["leopard", "liquid"].contains(texture), let screen = window?.screen ?? NSScreen.main, let url = NSWorkspace.shared.desktopImageURL(for: screen) {
+            wallpaper.show(url, softened: texture == "liquid", displayWidth: screen.frame.width)
+        }
         else { wallpaper.image = nil }
     }
     func windowShouldClose(_ sender: NSWindow) -> Bool { dismiss(); return false }

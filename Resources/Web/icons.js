@@ -36,7 +36,9 @@ const Icons = (() => {
     previous: '<path d="M5 5v14m14-14L8 12l11 7Z"/>',
     next: '<path d="M19 5v14M5 5l11 7-11 7Z"/>'
   };
-  const symbol = name => `<svg class="symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.spark}</svg>`;
+  let systemImages = {};
+  const configure = images => { systemImages = images || {}; };
+  const symbol = name => `<svg class="symbol${systemImages[name] ? ' has-system-symbol' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="drawn-symbol">${paths[name] || paths.spark}</g>${systemImages[name] ? `<image class="system-symbol" href="${systemImages[name]}" width="24" height="24"/>` : ''}</svg>`;
   const catalog = type => `<span class="modern-icon modern-${Core.escape(type)}">${symbol(type)}</span>`;
-  return { symbol, catalog };
+  return { symbol, catalog, configure };
 })();
