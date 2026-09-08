@@ -53,3 +53,48 @@
 .connection-browser .connection-actions { margin-top:auto; }
 [data-widget-size="small"] .connection-browser .connection-inputs label { display:flex; }
 [data-widget-size="small"] .connection-browser .connection-inputs input { margin-top:0; }
+
+.connection-activity { gap:4px; padding:11px 13px; }
+.connection-activity .connection-results { overflow:auto; min-height:48px; }
+.activity-display { display:flex; align-items:center; gap:14px; height:calc(100% - 15px); min-height:43px; }
+.activity-summary { display:flex; flex-direction:column; min-width:78px; flex:1; }
+.activity-summary strong { font:600 30px/1 -apple-system,sans-serif; font-variant-numeric:tabular-nums; letter-spacing:-1px; }
+.activity-summary span { font-size:11px; line-height:15px; }
+.activity-summary .activity-range { font-size:10px; color:#555d61; }
+.activity-chart { flex:1; min-width:0; }
+.activity-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:3px; max-width:158px; }
+.activity-day { display:block; width:100%; height:8px; min-width:0; padding:0; border:1px solid #1f23281f; border-radius:2px; background:#e2e6e4; }
+.activity-day[data-level="1"] { background:#a8d797; }
+.activity-day[data-level="2"] { background:#5fb45b; }
+.activity-day[data-level="3"] { background:#2e8d45; }
+.activity-day[data-level="4"] { background:#176132; }
+.activity-day[data-level="-1"] { background:repeating-linear-gradient(135deg,#c3c7c5 0 2px,#e6e9e7 2px 4px); }
+.activity-day:hover,.activity-day:focus-visible,.activity-day[aria-pressed="true"] { outline:2px solid #2256b5; outline-offset:1px; }
+.activity-detail { height:15px; font-size:9px; line-height:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.liquid .connection-activity { padding:12px 15px; gap:4px; }
+.liquid .activity-range { color:#ffffffd9; }
+.liquid .activity-day { border-color:#ffffff30; }
+.liquid .activity-day[data-level="0"] { background:#ffffff24; }
+.liquid .activity-day[data-level="1"] { background:#427d51; }
+.liquid .activity-day[data-level="2"] { background:#57a765; }
+.liquid .activity-day[data-level="3"] { background:#78cf80; }
+.liquid .activity-day[data-level="4"] { background:#ace7a0; }
+[data-widget-size="small"] .connection-activity .activity-summary { min-width:42px; }
+[data-widget-size="small"] .connection-activity .activity-summary strong { font-size:22px; }
+[data-widget-size="small"] .activity-display { gap:7px; }
+[data-widget-size="small"] .activity-grid { gap:2px; }
+[data-widget-size="small"] .activity-day { height:8px; }
+[data-widget-size="small"] .activity-range { display:none; }
+[data-widget-size="small"] .connection-activity .connection-open { font-size:10px; }
+[data-widget-size="large"] .activity-display { flex-direction:column; justify-content:center; gap:20px; }
+[data-widget-size="large"] .activity-summary { align-items:center; flex:0; }
+[data-widget-size="large"] .activity-summary strong { font-size:42px; }
+[data-widget-size="large"] .activity-chart { width:100%; flex:0; }
+[data-widget-size="large"] .activity-grid { max-width:none; gap:5px; }
+[data-widget-size="large"] .activity-day { height:17px; }
+/* Keep activity marks square at each size, instead of stretching into bars. */
+.activity-grid { grid-template-columns:repeat(7,8px); width:max-content; margin-left:auto; }
+[data-widget-size="small"] .activity-grid { grid-template-columns:repeat(7,7px); }
+[data-widget-size="small"] .activity-day { height:7px; }
+[data-widget-size="large"] .activity-grid { grid-template-columns:repeat(7,24px); gap:6px; margin:0 auto; }
+[data-widget-size="large"] .activity-day { height:24px; }

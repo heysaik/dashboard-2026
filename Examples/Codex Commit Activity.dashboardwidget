@@ -1,0 +1,34 @@
+{
+  "checks": [],
+  "connection": {
+    "actionLabel": "Open GitHub",
+    "fields": [],
+    "itemsPath": "",
+    "mode": "json",
+    "openURL": "https://github.com/openai/codex/commits",
+    "parameters": [],
+    "presentation": {
+      "dateEncoding": "unix",
+      "datePath": "week",
+      "days": 31,
+      "label": "commits",
+      "type": "activity",
+      "valuePath": "days"
+    },
+    "query": "Daily commit counts (excluding merge commits) for openai/codex over the past month, rendered as green activity squares. GitHub returns 52 weekly records; each days array holds seven consecutive daily counts starting on the Sunday given by week. A 202/204 response means GitHub is still computing statistics, not zero commits. Use Refresh to reload.",
+    "url": "https://api.github.com/repos/openai/codex/stats/commit_activity"
+  },
+  "height": 170,
+  "html": "<!doctype html><html></html>",
+  "kind": "connected",
+  "name": "Commit activity",
+  "size": "medium",
+  "sizeNotes": {},
+  "supportedSizes": [
+    "small",
+    "medium",
+    "large"
+  ],
+  "version": 2,
+  "width": 348
+}

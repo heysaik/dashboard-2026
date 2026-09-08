@@ -61,6 +61,9 @@
     return board;
   }
   const widgetSizes = {small:[170,170],medium:[348,170],large:[348,360]};
+  function validPresentation(p) {
+    return p==null || p.type==='activity' && ['iso8601','unix'].includes(p.dateEncoding) && Number.isInteger(p.days) && p.days>=7 && p.days<=93 && ['datePath','valuePath'].every(key=>typeof p[key]==='string' && p[key].length>0 && p[key].length<=150) && typeof p.label==='string' && p.label.length>0 && p.label.length<=30;
+  }
   function weatherDescription(code,day=true) {
     if(code==null)return 'Conditions unavailable';
     if(code===0)return day?'Sunny':'Clear';
@@ -75,8 +78,37 @@
   function validConnection(c) {
     try {
       const url = new URL(c.url);
+      if(!validPresentation(c.presentation) || c.presentation && c.mode!=='json')return false;
+      if(c.openURL!=null){const open=new URL(c.openURL);if(open.protocol!=='https:' || open.username || open.password || open.hostname.includes('{') || c.openURL.length>=2000)return false;}
       return ['json','agent','browser'].includes(c.mode) && url.protocol === 'https:' && !url.username && !url.password && !url.hostname.includes('{') && c.url.length < 2000 && typeof c.query === 'string' && c.query.length < 3000 && typeof c.itemsPath === 'string' && typeof c.actionLabel === 'string' && c.actionLabel.length <= 60 && Array.isArray(c.fields) && c.fields.length <= 6 && c.fields.every(f=>typeof f.label==='string' && f.label.length<=60 && typeof f.path==='string' && f.path.length<=150) && Array.isArray(c.parameters) && c.parameters.length<=4 && new Set(c.parameters.map(p=>p.id)).size===c.parameters.length && c.parameters.every(p=>/^[a-zA-Z][a-zA-Z0-9_]{0,30}$/.test(p.id) && ['text','date','number'].includes(p.type) && typeof p.label==='string' && p.label.length<=60 && typeof p.value==='string' && p.value.length<=256) && (!c.auth || (c.mode==='json' && ['header','query'].includes(c.auth.placement) && /^[a-zA-Z0-9_-]{1,60}$/.test(c.auth.name) && !['host','cookie','referer'].includes(c.auth.name.toLowerCase()) && typeof c.auth.prefix==='string' && c.auth.prefix.length<=30 && !/[\r\n]/.test(c.auth.prefix)));
     } catch { return false; }
+  }
+  function activitySeries(payload, connection, retrievedAt=new Date().toISOString(), hasMore=false) {
+    const p=connection.presentation;
+    if(!p || !validPresentation(p))throw new Error('This activity grid needs a valid data mapping.');
+    if(hasMore)throw new Error('The API returned only part of the activity. Use a complete daily-count endpoint.');
+    const items=pathValue(payload,connection.itemsPath);
+    if(!Array.isArray(items))throw new Error('Activity needs an array of dated counts from the source.');
+    const end=new Date(retrievedAt);if(!Number.isFinite(end.getTime()))throw new Error('The source has no valid retrieval date.');
+    end.setUTCHours(0,0,0,0);const endTime=end.getTime(),startTime=endTime-(p.days-1)*86400000,counts=new Map();
+    for(const item of items) {
+      const rawDate=pathValue(item,p.datePath),rawValues=pathValue(item,p.valuePath);
+      const time=p.dateEncoding==='unix' && typeof rawDate==='number'?rawDate*1000:p.dateEncoding==='iso8601' && typeof rawDate==='string' && /^\d{4}-\d{2}-\d{2}(T.*(?:Z|[+-]\d\d:\d\d))?$/.test(rawDate)?Date.parse(rawDate):NaN;
+      if(!Number.isFinite(time))throw new Error(`The source did not provide a valid date at ${p.datePath}.`);
+      const date=new Date(time);date.setUTCHours(0,0,0,0);const first=date.getTime();
+      const values=Array.isArray(rawValues)?rawValues:[rawValues];
+      if(!values.length || values.length>31 || !values.every(v=>Number.isSafeInteger(v) && v>=0))throw new Error(`The source did not provide daily counts at ${p.valuePath}.`);
+      values.forEach((value,index)=>{const day=first+index*86400000;if(day<startTime || day>endTime)return;if(counts.has(day))throw new Error('The source returned overlapping daily counts.');counts.set(day,value);});
+    }
+    const maximum=Math.max(1,...counts.values());
+    const days=Array.from({length:p.days},(_,i)=>{const time=startTime+i*86400000,count=counts.has(time)?counts.get(time):null;return {date:new Date(time).toISOString().slice(0,10),count,level:count==null?-1:count===0?0:Math.min(4,Math.max(1,Math.ceil(count/maximum*4)))};});
+    return {days,total:days.reduce((sum,day)=>sum+(day.count??0),0),missing:days.filter(d=>d.count==null).length,label:p.label};
+  }
+  function dataShape(value,depth=0) {
+    if(value===null)return 'null'; if(depth>=5)return Array.isArray(value)?'array':typeof value;
+    if(Array.isArray(value))return {type:'array',length:value.length,item:value.length?dataShape(value[0],depth+1):'unknown'};
+    if(typeof value==='object')return Object.fromEntries(Object.entries(value).slice(0,24).map(([k,v])=>[k,dataShape(v,depth+1)]));
+    return typeof value;
   }
   function connectionURL(c, values={}) {
     if(!validConnection(c)) throw new Error('This widget needs a valid data connection.');
@@ -103,9 +135,11 @@
   function validManifest(value) {
     const base = value && [1,2].includes(value.version) && typeof value.name === 'string' && value.name.trim().length > 0 && value.name.length <= 80 && Number.isInteger(value.width) && value.width >= 140 && value.width <= 800 && Number.isInteger(value.height) && value.height >= 100 && value.height <= 700 && typeof value.html === 'string' && value.html.length > 0 && new TextEncoder().encode(value.html).length <= 1000000;
     if(!base || value.version===1) return !!base;
+    if(value.supportedSizes && (!Array.isArray(value.supportedSizes) || !value.supportedSizes.length || value.supportedSizes.some(size=>!Object.hasOwn(widgetSizes,size))))return false;
+    if(value.checks && (!Array.isArray(value.checks) || value.checks.length>6 || value.checks.some(check=>typeof check.name!=='string' || !Array.isArray(check.steps) || check.steps.length<1 || check.steps.length>8 || !check.steps.some(s=>['assertText','assertValue'].includes(s.action)) || check.steps.some(s=>!['click','input','key','wait','assertText','assertValue'].includes(s.action) || typeof s.selector!=='string' || s.selector.length>200 || typeof s.value!=='string' || s.value.length>500))))return false;
     return !!widgetSizes[value.size] && value.width===widgetSizes[value.size][0] && value.height===widgetSizes[value.size][1] && ['tool','connected'].includes(value.kind) && (value.kind==='connected'?validConnection(value.connection):value.connection==null);
   }
-  const core = { clamp, escape, Calculator, units, convert, calendarCells, shuffleTiles, validManifest, widgetSizes, validConnection, connectionURL, pathValue, dataRows, weatherDescription };
+  const core = { clamp, escape, Calculator, units, convert, calendarCells, shuffleTiles, validManifest, widgetSizes, validConnection, connectionURL, pathValue, dataRows, weatherDescription, validPresentation, activitySeries, dataShape };
   if (typeof module !== 'undefined') module.exports = core;
   root.Core = core;
 })(typeof globalThis === 'undefined' ? this : globalThis);

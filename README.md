@@ -71,7 +71,7 @@ Manage Widgets controls which definitions appear in the shelf. All widgets suppo
 
 ## AI widgets
 
-Select a provider and Small, Medium or Large, describe a widget, try the preview, then add it or drag it onto the dashboard. Connected widgets use real JSON APIs, source-verified Codex/Claude web excerpts, or a browser handoff for actions such as ticket checkout. API keys are entered through a native prompt and stored in Keychain. Missing data displays an error instead of invented values. A verified Codex-generated example is included at [Examples/Brass Mechanical Counter.dashboardwidget](Examples/Brass%20Mechanical%20Counter.dashboardwidget).
+Select a provider and Automatic (or a preferred size), then describe a widget. The creator checks real sources, all three sizes and offline interactions, asks the provider to repair failures, and reviews the requested behavior before showing a working preview. Add it or drag it onto the dashboard after checking it. Connected widgets use real JSON APIs, source-verified Codex/Claude web excerpts, or a browser handoff for actions such as ticket checkout. API keys are entered through a native prompt and stored in Keychain. Missing data displays an error instead of invented values. A verified Codex-generated example is included at [Examples/Brass Mechanical Counter.dashboardwidget](Examples/Brass%20Mechanical%20Counter.dashboardwidget).
 
 Codex and Claude Code use their existing local authentication and their account's service. LM Studio uses a loopback OpenAI-compatible endpoint; start its server and load a model first. The app has **no App Sandbox**, while generated HTML runs in an isolated WebKit frame with a constrained state API. See [widget format and provider details](docs/WidgetFormat.md).
 
@@ -80,11 +80,14 @@ Your layout is saved atomically to `~/Library/Application Support/Dashboard 2026
 ## Verify
 
 ```sh
-node --test Tests/core.test.cjs
+node --test Tests/*.test.cjs
 ./scripts/test.sh                  # native WebKit integration, isolated data directory
 ./scripts/test.sh --test-space     # also creates and checks a temporary full-screen Space
 ./scripts/test.sh --test-ai        # makes a real generation request through Codex
 ./scripts/test.sh --test-connected # real JSON, Weather, generation and Codex/Claude web checks
+./scripts/test.sh --test-creator   # exact GitHub activity prompt through the full creator
+./scripts/test.sh --test-creator --repair-activity --creator-claude
+./scripts/test.sh --test-creator --repair-counter
 ```
 
 See [verification results](docs/Verification.md) and [design/data references](docs/References.md).

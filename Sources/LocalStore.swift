@@ -29,12 +29,15 @@ final class LocalStore {
 struct WidgetManifest: Codable {
     let version: Int
     let name: String
-    let width: Int
-    let height: Int
+    var width: Int
+    var height: Int
     let html: String
     var kind: String? = nil
     var size: String? = nil
     var connection: WidgetConnection? = nil
+    var checks: [WidgetCheck]? = nil
+    var supportedSizes: [String]? = nil
+    var sizeNotes: [String: String]? = nil
     func validate() throws {
         guard [1, 2].contains(version), !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, name.count <= 80,
               (140...800).contains(width), (100...700).contains(height), !html.isEmpty, html.utf8.count <= 1_000_000 else {
@@ -46,7 +49,13 @@ struct WidgetManifest: Codable {
             guard width == dimensions.0, height == dimensions.1 else { throw DashboardError.message("The widget dimensions do not match its selected size.") }
             if kind == "connected" { guard let connection else { throw DashboardError.message("This widget needs a data source.") }; try connection.validate() }
             else if connection != nil { throw DashboardError.message("Offline widgets cannot declare a hidden connection.") }
+            if let checks { guard checks.count <= 6 else { throw DashboardError.message("Use at most six interaction checks.") }; for check in checks { try check.validate() } }
+            if let supportedSizes { guard !supportedSizes.isEmpty, Set(supportedSizes).count == supportedSizes.count, supportedSizes.allSatisfy({ ["small", "medium", "large"].contains($0) }) else { throw DashboardError.message("The supported widget sizes are invalid.") } }
         }
+    }
+    mutating func selectSize(_ requested: String) {
+        guard let dimensions = ["small": (170, 170), "medium": (348, 170), "large": (348, 360)][requested] else { return }
+        size = requested; width = dimensions.0; height = dimensions.1
     }
     static func parse(_ text: String) throws -> WidgetManifest {
         var clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -57,3 +66,13 @@ struct WidgetManifest: Codable {
         return widget
     }
 }
+
+struct WidgetCheck: Codable {
+    let name: String
+    let steps: [WidgetCheckStep]
+    func validate() throws {
+        guard !name.isEmpty, name.count <= 100, (1...8).contains(steps.count), steps.contains(where: { $0.action.hasPrefix("assert") }),
+              steps.allSatisfy({ ["click", "input", "key", "wait", "assertText", "assertValue"].contains($0.action) && $0.selector.count <= 200 && $0.value.count <= 500 && ($0.action != "wait" || (0...3000).contains(Int($0.value) ?? -1)) }) else { throw DashboardError.message("Interaction checks need bounded actions and an expected result.") }
+    }
+}
+struct WidgetCheckStep: Codable { let action: String; let selector: String; let value: String }

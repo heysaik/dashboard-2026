@@ -21,6 +21,12 @@ extension AppDelegate {
         try check("stale and future observations are rejected", !WeatherService.fresh(990_000, now: now) && !WeatherService.fresh(1_002_000, now: now) && WeatherService.fresh(999_500, now: now))
         try check("observed temperatures convert correctly", WeatherService.celsius(25, unit: "Fahrenheit") == 77 && WeatherService.celsius(25, unit: "Celsius") == 25)
         try check("Downtown station is within one kilometre of SF", WeatherService.distance(37.77493, -122.41942, 37.77056, -122.42694) < 1)
+        for status in [202, 204] {
+            var pending = false
+            do { try ConnectedDataService.requireData(status) } catch { pending = true }
+            try check("HTTP \(status) is pending data rather than a complete dataset", pending)
+        }
+        try check("paginated APIs are marked incomplete", ConnectedDataService.hasNextPage("<https://api.github.com/page=2>; rel=\"next\", <https://api.github.com/page=9>; rel=\"last\"") && !ConnectedDataService.hasNextPage(""))
         guard live else { return report }
         let weather = try await bridge.weather.forecast(["latitude": 37.77493, "longitude": -122.41942, "unit": "Fahrenheit"])
         try check("weather includes source and retrieval time", weather["source"] is [String: Any] && weather["retrievedAt"] is Double)

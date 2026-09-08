@@ -28,7 +28,7 @@ Automated tests use a separate `DASHBOARD_DATA_DIR`, preserving the installed ap
 
 ## Limits
 
-Claude Code was detected and its adapter implemented, but a live Claude generation was not exercised. LM Studio was detected with its local server stopped; generation requires starting its server and loading a model. Contacts and Music integrations were not exercised with personal data or permission grants.
+The initial release did not exercise live Claude generation; the later creator update below verified a real Claude repair loop. LM Studio was detected with its local server stopped; generation requires starting its server and loading a model. Contacts and Music integrations were not exercised with personal data or permission grants.
 
 This is a functional recreation with new artwork, not a pixel-for-pixel validation against a running Leopard installation. Retired flight, people/business, movie-showtime, translation, and ski-condition services have the replacement behaviors documented in the README. Network failures are displayed rather than filled with invented live data.
 
@@ -47,3 +47,19 @@ Full-screen window and WebKit bounds remained 1512 × 982, and SkyLight leftmost
 Additional error fixtures verified that missing snowfall is not displayed as zero, an incomplete scoreboard is not described as no scheduled games, incomplete movie data is not described as no matches, and a missing exchange rate clears the result. The migration was exercised against a copy of the existing layout: Fandango became a medium browser widget, its exact old definition was archived, and the unrelated custom definition stayed identical.
 
 The packaged app was installed at `~/Applications/Dashboard.app`. Its first launch preserved all five existing widget IDs, both custom-definition IDs, and the unrelated custom definition byte-for-byte in JSON value terms. The installed Fandango definition migrated to version 2 at 348 × 170 with an exact archival copy of the original. The installed Weather widget visibly displayed the observed 77°F and 2:43 PM update time.
+
+## Creator validation and automatic repair
+
+The creator update passed 20 Node tests, 86 existing WebKit interaction checks, eight additional creator checks and 16 native connection validations. New coverage includes real DOM interaction probes in all three isolated sizes, clipped-control rejection, wrong-button-result rejection, API field-shape feedback, automatic repair, blocked credentials, cancellation, bounded exhaustion, incomplete-size handling, pending HTTP 202/204 responses and partial-page detection. Activity tests distinguish explicit zero from absent dates and reject invalid counts, overlapping dates and incomplete pagination. Activity cells are checked for a square aspect ratio at every size.
+
+Three live cases were exercised on this Mac using the real provider CLIs and GitHub API:
+
+- The user's exact `openai/codex` green-square prompt generated a working 31-day activity grid and passed all three sizes. At the check it showed 1,387 commits with no missing dates, calculated from GitHub's weekly `days` arrays.
+- Starting from an intentionally broken `Activity` mapping, Claude Code received the actual missing-path error and source field types, repaired the mapping, and passed data, all three sizes and the separate functionality review on attempt two.
+- Starting from a counter whose Plus button returned zero instead of one, Codex received the failing interaction assertions for all three sizes, repaired the counter and supplied checks for Plus, Minus and Reset. It passed layout, interactions and the functionality review on attempt two.
+
+The activity widget was visually inspected at Small, Medium and Large. Its human-facing Open GitHub action targets the repository's commits page, while its API remains separate. Counts use UTC and GitHub's repository statistics, which exclude merge commits. The generated portable example contains no cached API payload or credentials.
+
+After installation, the exact GitHub prompt was run through the installed app's Create a Widget dialog with Automatic sizing. It passed the real source, all three layouts and the functionality review on the first attempt, selected Medium, and visibly rendered 1,387 commits across 31 daily squares. The result was left in the preview without adding a widget. All four existing widget IDs and both custom-definition IDs were preserved.
+
+The loop is bounded to six attempts and does not start further attempts after twelve minutes. Passing these checks is evidence for the tested data/layout/control paths, not a guarantee of every possible widget behavior or remote service. Unsupported requests, missing credentials and exhausted repairs are reported explicitly; they are not presented as a ready widget.

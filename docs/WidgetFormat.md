@@ -1,6 +1,6 @@
 # Making widgets
 
-Choose **Create a Widget…**, select Codex, Claude Code, or LM Studio, choose Small, Medium or Large, and describe the widget. Try its real controls in the preview before adding it or using **Drag to Place**. The information button on any custom widget lets you change its size, export it, or remix it. Multiple instances have independent inputs and saved state.
+Choose **Create a Widget…**, select Codex, Claude Code, or LM Studio, choose Automatic (or a preferred size), and describe the widget. The creator builds, checks and repairs the candidate before presenting a preview. Try its real controls there before adding it or using **Drag to Place**. The information button on any custom widget lets you change its size, export it, or remix it. Multiple instances have independent inputs and saved state.
 
 ## Sizes
 
@@ -10,7 +10,7 @@ Choose **Create a Widget…**, select Codex, Claude Code, or LM Studio, choose S
 | Medium | 348 × 170 |
 | Large | 348 × 360 |
 
-Version 2 dimensions must match the selected size. Connected widgets reflow in all three sizes. New offline tools are instructed to use responsive HTML. Older version 1 widgets keep their original dimensions and can also be scaled into these sizes; changing their layout requires a remix.
+Version 2 dimensions must match the selected size. Connected widgets reflow in all three sizes. New offline tools use responsive HTML and are rendered and tested independently at all three sizes. The creator reviews which tested size best suits the requested content. A manually selected size is preserved. If repeated repairs cannot make a size work, that option is disabled; at least one size must pass before a working preview is offered. Older version 1 widgets keep their original dimensions and can also be scaled into these sizes; changing their layout requires a remix.
 
 ## Real data and actions
 
@@ -22,9 +22,22 @@ Three connection modes are supported:
 - **Web research:** **Check web** starts the selected local Codex or Claude Code with web search/fetch tools. The agent returns short verbatim excerpts and HTTPS source links. The host independently retrieves each page and accepts an excerpt only if it occurs in the retrieved text. Checks are manual; opening Dashboard does not spend an LLM request. Blocked or JavaScript-only pages may not provide extractable results. **Open Website** remains available.
 - **Browser:** Opens the real service with the widget’s input parameters. Live availability, login, seats, checkout and confirmation happen on that service. A browser widget does not claim a completed transaction.
 
+Connected widgets can render records or an activity grid from actual dated daily counts. Activity grids support ISO dates or Unix timestamps and consecutive daily-count arrays, such as GitHub’s weekly `days` arrays. A rolling 7–93 day window uses UTC. Missing dates are marked unavailable, and partial paginated data is rejected for activity totals. GitHub repository statistics exclude merge commits. `connection.openURL` opens the human-readable website separately from the API endpoint.
+
 Every result shows its source and retrieval time. Results older than 15 minutes are labelled **Saved result**. Retrieval time is not the provider’s publication time: source content can be delayed, incomplete or wrong. Quote verification establishes that the source contains the words; it cannot establish their truth or freshness. Each instance caches at most 200 KB, and errors clear its previous snapshot.
 
 The repaired Fandango widget uses its verified ZIP/date movie-times route and opens Fandango for ticket selection and checkout. Its settings can switch to web research, which may be unable to extract dynamic showtimes. The earlier locally generated ticket planner is archived under `Widget Backups` before migration. Other legacy widgets retain their definitions; remix an older widget that needs external data.
+
+
+## Build, test and repair
+
+The creator uses the selected Codex, Claude Code or LM Studio provider in a bounded repair loop. Each candidate must pass manifest validation, real source retrieval and field mapping, layout checks at Small/Medium/Large, and a separate model review against the original requested behavior. Offline tools also run their declared interaction checks in fresh isolated frames at each size. The host detects uncaught script errors, clipped controls, overflow and failed assertions. Failures, API field shapes (without response values), and the previous candidate are sent back to the selected provider for repair.
+
+The loop allows six attempts and stops starting attempts after twelve minutes. Each provider request retains its three-minute timeout. Credentials, missing user inputs, blocked access and provider sign-in/usage failures can require user action. Exhausted or blocked candidates are labelled unfinished and cannot be installed through the creator until **Retry checks** succeeds. If functionality works but some sizes repeatedly fail, the validated sizes are offered with the unavailable sizes disabled. API results remain subject to source availability after creation.
+
+The preview is withheld during generation and validation. It appears when checks pass, or when the user explicitly chooses **Review unfinished widget** after a blocker/exhaustion. Cancel interrupts generation or agent research. Inputs and provider selection stay fixed for the running build; preview input values survive resizing and transfer to the installed widget.
+
+Offline manifests include `checks`, an array of up to six `{name, steps}` tests. Each step has `action`, CSS `selector`, and string `value`. Actions are `click`, `input`, `key`, `wait`, `assertText`, and `assertValue`. Each test needs an assertion; waits are limited to three seconds per step. Assertions compare normalized exact text or exact field values. The host bounds each size's probe to thirty seconds, and discards its test state. Connected widgets use `checks: []` because their rendering, data mapping and controls are host-owned. Tests and model review reduce failures; they do not prove every possible interaction, visual state or remote-service outcome.
 
 ## Portable connected file
 

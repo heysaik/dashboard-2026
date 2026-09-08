@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -euo pipefail
 cd "${0:A:h:h}"
-node --test Tests/core.test.cjs
+node --test Tests/*.test.cjs
 mkdir -p build
 ./scripts/build.sh > build/test-build.log 2>&1
 test_dir="$(mktemp -d /tmp/dashboard2026-test.XXXXXX)"

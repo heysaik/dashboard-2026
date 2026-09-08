@@ -86,3 +86,22 @@ test('weather codes distinguish fog, freezing rain, snow and unavailable conditi
   assert.equal(weatherDescription(45),'Fog');assert.equal(weatherDescription(67),'Freezing rain');assert.equal(weatherDescription(85),'Snow');
   assert.equal(weatherDescription(0,false),'Clear');assert.equal(weatherDescription(null),'Conditions unavailable');assert.equal(weatherDescription(123),'Conditions unavailable');
 });
+
+const { activitySeries } = require('../Resources/Web/core.js');
+const activityConnection={...connection,itemsPath:'',fields:[],parameters:[],url:'https://api.github.com/repos/openai/codex/stats/commit_activity',presentation:{type:'activity',datePath:'week',valuePath:'days',dateEncoding:'unix',days:7,label:'commits'}};
+test('activity grid uses explicit daily counts, UTC dates, and no future statistics',()=>{
+  const week=Date.parse('2026-09-06T00:00:00Z')/1000;
+  const data=activitySeries([{week,days:[0,3,7,99,99,99,99]}],activityConnection,'2026-09-08T23:59:59Z');
+  assert.equal(data.total,10);assert.equal(data.missing,4);assert.equal(data.days.at(-1).date,'2026-09-08');assert.equal(data.days.at(-1).count,7);assert.equal(data.days[4].count,0);assert.equal(data.days[0].count,null);
+});
+test('activity grid refuses invented fields, partial pages, bad values and duplicate dates',()=>{
+  const week=Date.parse('2026-09-06T00:00:00Z')/1000;
+  for(const payload of [[{week,Activity:[1]}],[{week,days:[null]}],[{week,days:[-1]}],[{week:'yesterday',days:[1]}],[{week,days:[1]},{week,days:[2]}]])assert.throws(()=>activitySeries(payload,activityConnection,'2026-09-08T00:00:00Z'));
+  assert.throws(()=>activitySeries([],activityConnection,'2026-09-08T00:00:00Z',true));
+  assert.equal(activitySeries([],activityConnection,'2026-09-08T00:00:00Z').missing,7);
+});
+test('human-facing source links and activity manifests are validated',()=>{
+  assert.equal(validConnection({...activityConnection,openURL:'https://github.com/openai/codex/commits'}),true);
+  assert.equal(validConnection({...activityConnection,openURL:'javascript:alert(1)'}),false);
+  assert.equal(validConnection({...activityConnection,presentation:{...activityConnection.presentation,valuePath:''}}),false);
+});

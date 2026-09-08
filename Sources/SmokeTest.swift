@@ -26,6 +26,7 @@ extension AppDelegate {
                 }
                 try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]).write(to: bridge.store.directory.appendingPathComponent("native-tests.json"), options: .atomic)
                 report["connections"] = try await connectedTests(live: ProcessInfo.processInfo.arguments.contains("--test-connected"))
+                report["creator"] = try await webView.callAsyncJavaScript("return await Dashboard.runCreatorTests(live, mode, provider)", arguments: ["live": ProcessInfo.processInfo.arguments.contains("--test-creator"), "mode": ProcessInfo.processInfo.arguments.contains("--repair-counter") ? "counter" : ProcessInfo.processInfo.arguments.contains("--repair-activity") ? "repair" : "exact", "provider": ProcessInfo.processInfo.arguments.contains("--creator-claude") ? "claude" : "codex"], in: nil, contentWorld: .page)
                 if ProcessInfo.processInfo.arguments.contains("--test-ai") {
                     let manifest = try await bridge.generator.generate(prompt: "Make a small brass mechanical counter with a plus and minus button and a reset button. Persist the count. Size 220 by 180.", provider: "codex", endpoint: "http://127.0.0.1:1234/v1", model: "")
                     let widget = try WidgetManifest.parse(manifest)

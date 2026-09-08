@@ -37,6 +37,11 @@ import WebKit
             let id = data["id"] as? String ?? "preview"
             if action == "connectedKey" { guard !app.isTest else { throw DashboardError.message("Keychain prompts are disabled in tests.") }; return try connected.credentials.configure(id, connection) }
             return try await connected.read(id: id, credentialID: data["credentialID"] as? String ?? id, connection: connection, values: data["values"] as? [String: String] ?? [:], provider: data["provider"] as? String ?? "codex", endpoint: data["endpoint"] as? String ?? "http://127.0.0.1:1234/v1", model: data["model"] as? String ?? "")
+        case "validateWidgetWebsite":
+            guard let url = URL(string: data["url"] as? String ?? "") else { throw DashboardError.message("The website URL is invalid.") }
+            let (_, response) = try await PublicWeb().read(url)
+            try ConnectedDataService.requireData(response.statusCode)
+            return ["status": response.statusCode]
         case "connectedCancel": connected.cancel(data["id"] as? String ?? ""); return true
         case "archiveWidget":
             let directory = store.directory.appendingPathComponent("Widget Backups")
@@ -60,11 +65,17 @@ import WebKit
         case "music": return try music(data["command"] as? String ?? "status", volume: data["volume"] as? Int, playlist: data["playlist"] as? String)
         case "musicPlaylists": return try musicPlaylists()
         case "providers": return await generator.providers(endpoint: data["endpoint"] as? String ?? "http://127.0.0.1:1234/v1")
+        case "reviewWidget":
+            let context = try JSONSerialization.data(withJSONObject: ["request": data["prompt"] ?? "", "candidate": data["manifest"] ?? [:], "hostChecks": data["validation"] ?? [:]], options: [.sortedKeys])
+            let raw = try await generator.generate(prompt: String(decoding: context, as: UTF8.self), provider: data["provider"] as? String ?? "codex", endpoint: data["endpoint"] as? String ?? "http://127.0.0.1:1234/v1", model: data["model"] as? String ?? "", widget: false, review: true)
+            guard let start = raw.firstIndex(of: "{"), let end = raw.lastIndex(of: "}"), let result = try JSONSerialization.jsonObject(with: Data(raw[start...end].utf8)) as? [String: Any], result["satisfied"] is Bool, result["issues"] is [String] else { throw DashboardError.message("The final behavior review did not return a usable result. Retrying the build checks is needed.") }
+            return result
         case "generate", "translate":
             let prompt = data["prompt"] as? String ?? ""
-            let raw = try await generator.generate(prompt: prompt, provider: data["provider"] as? String ?? "codex", endpoint: data["endpoint"] as? String ?? "http://127.0.0.1:1234/v1", model: data["model"] as? String ?? "", widget: action == "generate", theme: data["theme"] as? String ?? "leopard", size: data["size"] as? String ?? "medium")
+            let raw = try await generator.generate(prompt: prompt, provider: data["provider"] as? String ?? "codex", endpoint: data["endpoint"] as? String ?? "http://127.0.0.1:1234/v1", model: data["model"] as? String ?? "", widget: action == "generate", theme: data["theme"] as? String ?? "leopard", size: data["size"] as? String ?? "auto", repair: data["repair"] as? String ?? "")
             if action == "translate" { return raw }
-            let manifest = try WidgetManifest.parse(raw)
+            var manifest = try WidgetManifest.parse(raw)
+            manifest.selectSize(data["size"] as? String ?? "auto")
             if prompt.range(of: "\\b(?:fandango|weather|showtimes?|book.*tickets?|live data|stock prices?|news feed|scrap(?:e|ing)|API)\\b", options: [.regularExpression, .caseInsensitive]) != nil, manifest.kind != "connected" {
                 throw DashboardError.message("This request needs real data or a working website. The model returned an offline widget, so it was not accepted. Try again with a source URL.")
             }

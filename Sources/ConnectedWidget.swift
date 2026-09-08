@@ -7,6 +7,20 @@ import Security
 struct WidgetField: Codable { let label: String; let path: String }
 struct WidgetParameter: Codable { let id: String; let label: String; let type: String; let value: String }
 struct WidgetAuth: Codable { let placement: String; let name: String; let prefix: String; let helpURL: String }
+struct WidgetPresentation: Codable {
+    let type: String
+    let datePath: String
+    let valuePath: String
+    let dateEncoding: String
+    let days: Int
+    let label: String
+    func validate() throws {
+        guard type == "activity", !datePath.isEmpty, datePath.count <= 150, !valuePath.isEmpty, valuePath.count <= 150,
+              ["iso8601", "unix"].contains(dateEncoding), (7...93).contains(days), !label.isEmpty, label.count <= 30 else {
+            throw DashboardError.message("Activity grids need actual dated counts and a supported date format.")
+        }
+    }
+}
 struct WidgetConnection: Codable {
     let mode: String
     let url: String
@@ -16,6 +30,8 @@ struct WidgetConnection: Codable {
     let parameters: [WidgetParameter]
     let auth: WidgetAuth?
     let actionLabel: String
+    var presentation: WidgetPresentation? = nil
+    var openURL: String? = nil
 
     func validate() throws {
         guard ["json", "agent", "browser"].contains(mode), url.count < 2000, query.count < 3000,
@@ -29,6 +45,11 @@ struct WidgetConnection: Codable {
         if let auth {
             guard mode == "json", ["header", "query"].contains(auth.placement), auth.name.range(of: "^[a-zA-Z0-9_-]{1,60}$", options: .regularExpression) != nil,
                   !["host", "cookie", "referer"].contains(auth.name.lowercased()), auth.prefix.count <= 30, !auth.prefix.contains("\n"), !auth.prefix.contains("\r") else { throw DashboardError.message("The API key configuration is invalid.") }
+        }
+        if let presentation { guard mode == "json" else { throw DashboardError.message("Activity grids require an API connection.") }; try presentation.validate() }
+        if let openURL {
+            guard openURL.count < 2000, let link = URL(string: openURL), link.scheme == "https", link.user == nil, link.password == nil,
+                  let host = link.host, !host.contains("{") else { throw DashboardError.message("Choose a valid HTTPS link for opening the website.") }
         }
     }
     func resolvedURL(_ values: [String: String]) throws -> URL {
@@ -61,9 +82,10 @@ struct WidgetConnection: Codable {
                 else { var parts = URLComponents(url: url, resolvingAgainstBaseURL: false)!; parts.queryItems = (parts.queryItems ?? []) + [URLQueryItem(name: auth.name, value: auth.prefix + key)]; requestURL = parts.url! }
             }
             let (data, response) = try await web.read(requestURL, headers: headers)
+            try Self.requireData(response.statusCode)
             guard (response.mimeType ?? "").contains("json") else { throw DashboardError.message("The API returned a web page rather than JSON. Check the endpoint or open the website.") }
             let object = try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
-            return ["mode": "json", "payload": Self.redacted(object, secret: secret), "source": url.absoluteString, "retrievedAt": ISO8601DateFormatter().string(from: Date())]
+            return ["mode": "json", "payload": Self.redacted(object, secret: secret), "source": url.absoluteString, "retrievedAt": ISO8601DateFormatter().string(from: Date()), "hasMore": Self.hasNextPage(response.value(forHTTPHeaderField: "Link") ?? "")]
         }
         guard provider != "lmstudio" else { throw DashboardError.message("Web research needs Codex or Claude Code. Choose one in Dashboard Settings, or open the source in your browser. LM Studio can still build widgets and use direct API connections.") }
         guard requests[id] == nil else { throw DashboardError.message("This widget is already checking its source.") }
@@ -94,6 +116,13 @@ struct WidgetConnection: Codable {
         }
         guard !items.isEmpty else { throw DashboardError.message("No source-verified information was available. Open the website for current details and checkout.") }
         return ["mode": "agent", "items": items, "source": url.absoluteString, "retrievedAt": ISO8601DateFormatter().string(from: Date())]
+    }
+    static func requireData(_ status: Int) throws {
+        if status == 202 { throw DashboardError.message("The source is still preparing its data. Wait a moment, then Refresh.") }
+        if status == 204 { throw DashboardError.message("The source returned no data. Try Refresh again shortly.") }
+    }
+    static func hasNextPage(_ link: String) -> Bool {
+        link.range(of: "rel\\s*=\\s*\"?next\\b", options: .regularExpression) != nil
     }
     static func redacted(_ object: Any, secret: String?) -> Any {
         guard let secret, !secret.isEmpty else { return object }
