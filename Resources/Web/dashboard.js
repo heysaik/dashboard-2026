@@ -4,7 +4,7 @@ const Dashboard = (() => {
   const canvas = document.getElementById('canvas'), modalLayer = document.getElementById('modal-layer');
   let state = { version: 1, widgets: [], custom: [], settings: { texture: 'leopard', scale: 1, reducedMotion: false, provider: 'codex', endpoint: 'http://127.0.0.1:1234/v1', model: '', disabled: [] } };
   const mounted = new Map();
-  const modernSizes = { weather: [348,170], clock: [170,170], calendar: [170,170], calculator: [170,300], stickies: [170,170], dictionary: [348,170], converter: [348,170], currency: [348,170], stocks: [348,360], translation: [348,320], contacts: [348,170], tilegame: [170,190], music: [348,170], google: [348,170], business: [348,170], people: [348,170], flight: [348,170], sports: [348,360], ski: [170,360], movies: [348,360], webclip: [348,360] };
+  const modernSizes = { weather: [348,170], clock: [170,170], calendar: [348,170], calculator: [170,300], stickies: [170,170], dictionary: [348,170], converter: [348,170], currency: [348,170], stocks: [348,360], translation: [348,320], contacts: [348,170], tilegame: [170,190], music: [348,170], google: [348,170], business: [348,170], people: [348,170], flight: [348,170], sports: [348,360], ski: [170,360], movies: [348,360], webclip: [348,360] };
   let environment = { safeTop: 0, notchLeft: 0, notchWidth: 0, reduceMotion: false, reduceTransparency: false, increaseContrast: false, nativeGlass: false };
   let materialFrame = 0, materialUntil = 0, materialQueued = false, lastMaterialLayout = '', shelfAnimation, modalAnimation;
   let ready = false, shelf = false, editing = false, saveTimer, saveChain = Promise.resolve(), z = 1, toastTimer, currentPreview = null, generation = false, lastFocus = null, savedLoadError = false;
@@ -26,6 +26,7 @@ const Dashboard = (() => {
     }
     if (materialFrame) { cancelAnimationFrame(materialFrame); materialFrame = 0; }
     syncMaterials();
+    if (!inactive) document.dispatchEvent(new Event('dashboarddidshow'));
   }
   function setEnvironment(value) {
     environment = { ...environment, ...value };
@@ -89,7 +90,7 @@ const Dashboard = (() => {
     document.body.classList.toggle('liquid', state.settings.texture === 'liquid');
     document.documentElement.dataset.theme = state.settings.texture === 'liquid' ? 'liquid' : 'leopard';
     canvas.style.transform = `scale(${state.settings.scale})`;
-    state.widgets.forEach(position);
+    state.widgets.forEach(instance => { mounted.get(instance.id)?.themeChange?.(); position(instance); });
     document.querySelectorAll('iframe').forEach(frame => frame.contentWindow?.postMessage({ type: 'dashboard-appearance', theme: document.documentElement.dataset.theme, reducedMotion: reducedMotion() }, '*'));
     if (shelf) renderCatalog();
     syncMaterials(400);
@@ -148,7 +149,7 @@ const Dashboard = (() => {
     const scale = state.settings.scale || 1;
     for (const second of [false, true]) { const element = document.createElement('div'); element.className = 'ripple' + (second ? ' second' : ''); Object.assign(element.style, { left: (instance.x - 15) * scale + 'px', top: (instance.y - 12) * scale + 'px', width: (instance.width + 30) * scale + 'px', height: (instance.height + 24) * scale + 'px' }); document.getElementById('effects').append(element); setTimeout(() => element.remove(), 1100); }
   }
-  function dispose(id) { const ctx = mounted.get(id); if (!ctx) return; ctx.cleanups.forEach(clean => clean()); ctx.root.remove(); mounted.delete(id); syncMaterials(); }
+  function dispose(id) { const ctx = mounted.get(id); if (!ctx) return; ctx.sizeAnimation?.cancel(); ctx.cleanups.forEach(clean => clean()); ctx.root.remove(); mounted.delete(id); syncMaterials(); }
   function remove(id) {
     const ctx = mounted.get(id); if (!ctx) return; ctx.root.classList.add('removing'); syncMaterials(360); state.widgets = state.widgets.filter(instance => instance.id !== id); save();
     setTimeout(() => dispose(id), 360);
@@ -162,9 +163,17 @@ const Dashboard = (() => {
     root.innerHTML = `<button class="widget-close" aria-label="Remove ${e(def.name)}">${Icons.symbol('close')}</button><div class="widget-flipper"><div class="widget-front"><div class="widget-content"></div>${def.html ? '<div class="custom-handle" title="Drag widget"></div>' : ''}<button class="widget-info" aria-label="${e(def.name)} settings">${Icons.symbol('info')}</button></div><div class="widget-back" inert></div></div><span class="widget-name">${e(def.name)}</span>`;
     canvas.append(root);
     const ctx = { root, instance, el: root.querySelector('.widget-content'), prefs: instance.prefs, cleanups: [], save, alive: () => mounted.get(instance.id) === ctx && root.isConnected,
-      interval(fn, delay) { const id = setInterval(() => { if (!document.hidden && ctx.alive()) fn(); }, delay); ctx.cleanups.push(() => clearInterval(id)); },
+      interval(fn, delay) { let last = Date.now(); const run = () => { if (!document.hidden && ctx.alive()) { last = Date.now(); fn(); } }; const id = setInterval(run, delay); ctx.cleanups.push(() => clearInterval(id)); ctx.on(document, 'dashboarddidshow', () => { if (Date.now() - last >= delay) run(); }); },
       on(target, event, fn) { target.addEventListener(event, fn); ctx.cleanups.push(() => target.removeEventListener(event, fn)); },
-      resize(width, height) { instance.width = width; instance.height = height; root.style.width = width + 'px'; root.style.height = height + 'px'; position(instance); },
+      onTheme(fn) { ctx.themeChange = fn; },
+      resize(width, height, animated = false) {
+        const style = getComputedStyle(root), from = { width: style.width, height: style.height, left: style.left, top: style.top };
+        ctx.sizeAnimation?.cancel();
+        instance.width = width; instance.height = height;
+        root.style.width = (root.classList.contains('flipped') ? Math.max(205,width) : width) + 'px'; root.style.height = (root.classList.contains('flipped') ? Math.max(205,height) : height) + 'px'; position(instance);
+        if (animated) ctx.sizeAnimation = Dashboard.animate(root, [from, { width: root.style.width, height: root.style.height, left: root.style.left, top: root.style.top }], { duration: 340 });
+        syncMaterials(animated ? 400 : 0); save();
+      },
       flip: () => flip(ctx)
     };
     mounted.set(instance.id, ctx);
@@ -173,7 +182,8 @@ const Dashboard = (() => {
     root.querySelector('.widget-close').onclick = () => remove(instance.id);
     root.querySelector('.widget-info').onclick = () => flip(ctx);
     if (def.html) renderCustom(ctx, def); else { try { def.render(ctx); } catch (error) { ctx.el.innerHTML = `<div class="service-error">${e(error.message)}</div>`; } }
-    root.addEventListener('pointerdown', event => { root.style.zIndex = ++z; if (!event.target.closest('input,textarea,select,button,a,iframe,[contenteditable],.widget-back')) beginDrag(event, ctx); });
+    root.addEventListener('pointerdown', event => { root.style.zIndex = ++z; if (event.target.closest('[data-drag-toggle]') || !event.target.closest('input,textarea,select,button,a,iframe,[contenteditable],.widget-back,[data-no-drag]')) beginDrag(event, ctx); });
+    root.addEventListener('click', event => { if (performance.now() < (ctx.ignoreClickUntil || 0)) { event.preventDefault(); event.stopImmediatePropagation(); } }, true);
     root.addEventListener('keydown', event => {
       if (event.target !== root) return;
       if (event.metaKey && event.key.toLowerCase() === 'r') { event.preventDefault(); refresh(instance); }
@@ -187,16 +197,18 @@ const Dashboard = (() => {
   function beginDrag(event, ctx) {
     if (event.button !== 0 || ctx.root.classList.contains('flipped')) return;
     const start = { x: event.clientX, y: event.clientY, left: ctx.instance.x, top: ctx.instance.y }; let moved = false;
-    ctx.root.setPointerCapture(event.pointerId);
+    (event.target.closest('[data-drag-toggle]') || ctx.root).setPointerCapture(event.pointerId);
     const move = event => { if (!moved && Math.hypot(event.clientX - start.x, event.clientY - start.y) < 3) return; moved = true; ctx.root.classList.add('dragging'); ctx.instance.x = start.left + (event.clientX - start.x) / state.settings.scale; ctx.instance.y = start.top + (event.clientY - start.y) / state.settings.scale; position(ctx.instance); };
-    const end = () => { ctx.root.classList.remove('dragging'); ctx.root.removeEventListener('pointermove', move); ctx.root.removeEventListener('pointerup', end); ctx.root.removeEventListener('pointercancel', end); syncMaterials(250); if (moved) save(); };
+    const end = () => { ctx.root.classList.remove('dragging'); ctx.root.removeEventListener('pointermove', move); ctx.root.removeEventListener('pointerup', end); ctx.root.removeEventListener('pointercancel', end); syncMaterials(250); if (moved) { ctx.ignoreClickUntil = performance.now() + 250; save(); } };
     ctx.root.addEventListener('pointermove', move); ctx.root.addEventListener('pointerup', end); ctx.root.addEventListener('pointercancel', end);
   }
   function refresh(instance) { rerender(instance); const root = mounted.get(instance.id)?.root; root?.classList.add('refreshing'); setTimeout(() => root?.classList.remove('refreshing'), 700); }
   function flip(ctx) {
     const root = ctx.root, back = root.querySelector('.widget-back'), front = root.querySelector('.widget-front'), def = definition(ctx.instance.type);
     if (root.classList.contains('flipped')) { back.querySelector('.done')?.click(); return; }
-    const originalHeight = ctx.instance.height; let resolvedCity = ctx.prefs.city;
+    ctx.sizeAnimation?.cancel();
+    const originalHeight = ctx.instance.height, originalWidth = ctx.instance.width; let resolvedCity = ctx.prefs.city;
+    root.style.width = Math.max(originalWidth, 205) + 'px';
     root.style.height = Math.max(originalHeight, def.html ? 220 : 205) + 'px';
     back.innerHTML = `<h2>${e(def.name)}</h2>${def.html ? '<p>Drag the top edge to move this widget. Its state is saved with your dashboard.</p><button class="silver-button export-widget">Export Widget…</button><button class="silver-button edit-widget">Remix with AI…</button>' : def.settings?.(ctx.prefs) || '<p>No settings for this widget.</p>'}<button class="silver-button done">Done</button>`;
     front.inert = true; back.inert = false; root.classList.add('flipped');
@@ -213,9 +225,9 @@ const Dashboard = (() => {
     setTimeout(() => back.querySelector('input,select,button')?.focus(), 300);
     function closeBack() {
       const cityInput = back.querySelector('[data-setting=city]');
-      if (cityInput && cityInput.value !== resolvedCity) { back.querySelector('.location-results').textContent = 'Click Find City and choose the matching location first.'; return; }
-      back.querySelectorAll('[data-setting]').forEach(element => ctx.prefs[element.dataset.setting] = element.value);
-      root.classList.remove('flipped'); front.inert = false; back.inert = true; root.style.height = originalHeight + 'px';
+      if (back.querySelector('.find-city') && cityInput && cityInput.value !== resolvedCity) { back.querySelector('.location-results').textContent = 'Click Find City and choose the matching location first.'; return; }
+      back.querySelectorAll('[data-setting]').forEach(element => ctx.prefs[element.dataset.setting] = element.type === 'checkbox' ? element.checked : element.value);
+      root.classList.remove('flipped'); front.inert = false; back.inert = true; root.style.height = originalHeight + 'px'; root.style.width = originalWidth + 'px';
       syncMaterials(650);
       save(); setTimeout(() => { if (ctx.alive()) { rerender(ctx.instance); mounted.get(ctx.instance.id)?.root.focus({ preventScroll: true }); } }, reducedMotion() ? 0 : 610);
     }
@@ -453,12 +465,99 @@ const Dashboard = (() => {
     toggleShelf(false);
     for (const def of Widgets.definitions.values()) { if (!state.widgets.some(w => w.type === def.id)) add(def.id); }
     assert('every bundled widget renders', [...Widgets.definitions.keys()].every(type => state.widgets.some(w => w.type === type)));
+    const widget = type => mounted.get(state.widgets.find(w => w.type === type).id);
+    const settle = () => new Promise(resolve => setTimeout(resolve, 420));
+    const clock = widget('clock'); clock.flip(); await settle();
+    const cities = clock.root.querySelector('[data-setting="city"]');
+    assert('World Clock offers system time-zone cities',cities.options.length > 100); cities.value='Tokyo';
+    clock.root.querySelector('.done').click(); await new Promise(resolve=>setTimeout(resolve,680));
+    assert('World Clock saves a new city without weather geocoding',widget('clock').prefs.city === 'Tokyo' && widget('clock').el.querySelector('.clock-label').textContent === 'Tokyo');
+    const calendar = widget('calendar');
+    calendar.el.querySelector('.date-page').click(); await settle();
+    assert('calendar collapses to a square and hides month controls', calendar.instance.width === 141 && calendar.instance.height === 141 && calendar.el.querySelector('.month-page').inert);
+    calendar.flip(); await new Promise(resolve=>setTimeout(resolve,650));
+    assert('collapsed widget settings have usable dimensions', parseFloat(getComputedStyle(calendar.root).width) >= 205 && parseFloat(getComputedStyle(calendar.root).height) >= 205);
+    calendar.root.querySelector('.done').click(); await new Promise(resolve=>setTimeout(resolve,680));
+    assert('calendar collapse survives settings flip', widget('calendar').instance.width === 141 && widget('calendar').prefs.expanded === false);
+    widget('calendar').el.querySelector('.date-page').click(); await settle();
+    widget('calendar').el.querySelector('[data-month="1"]').click(); widget('calendar').el.querySelector('[data-day="15"]').click();
+    assert('calendar selection updates date tile', widget('calendar').el.querySelector('.date-number').textContent === '15');
+    widget('calendar').el.querySelector('.month-title').click();
+    assert('calendar month heading returns to today', widget('calendar').prefs.selectedDate[2] === new Date().getDate() && widget('calendar').prefs.month === new Date().getMonth());
+    for (let i=0;i<4;i++) widget('calendar').el.querySelector('.date-page').click(); await settle();
+    assert('rapid calendar toggles settle at expanded width', Math.abs(widget('calendar').root.getBoundingClientRect().width / state.settings.scale - 300) < 1);
+    const weather = widget('weather'), weatherToggle = weather.el.querySelector('.weather-top');
+    if (!weatherToggle) throw new Error('Weather unavailable during interaction verification');
+    weatherToggle.click(); await settle();
+    assert('weather forecast collapses', weather.instance.height === 90 && weather.prefs.expanded === false);
+    weather.el.querySelector('.weather-top').dispatchEvent(new KeyboardEvent('keydown',{key:' ',bubbles:true})); await settle();
+    assert('weather forecast expands with keyboard', weather.instance.height === 150 && weather.prefs.expanded === true);
+    calcRoot.dispatchEvent(new KeyboardEvent('keydown',{key:'c',metaKey:true,bubbles:true}));
+    assert('Command-C does not clear calculator',calcRoot.querySelector('output').textContent === '56');
+    const copied = new DataTransfer(); calcRoot.dispatchEvent(new ClipboardEvent('copy',{clipboardData:copied,bubbles:true,cancelable:true}));
+    assert('calculator copies displayed number',copied.getData('text/plain') === '56');
+    const pasted = new DataTransfer(); pasted.setData('text/plain','123.5'); calcRoot.dispatchEvent(new ClipboardEvent('paste',{clipboardData:pasted,bubbles:true,cancelable:true}));
+    assert('calculator pastes numbers',calcRoot.querySelector('output').textContent === '123.5');
+    for (const key of ['c','7','×','8','=']) calcRoot.querySelector(`[data-key="${key}"]`).click();
+    const converter = widget('converter'); converter.prefs.category='Temperature'; converter.prefs.from='Fahrenheit'; converter.prefs.to='Celsius'; rerender(converter.instance);
+    const inverse = widget('converter').el.querySelector('.result'); inverse.value='100'; inverse.dispatchEvent(new Event('input'));
+    assert('unit converter supports reverse input with temperature offsets',Number(widget('converter').prefs.value) === 212);
+    const currency = widget('currency'); currency.prefs.from='USD'; currency.prefs.to='USD'; rerender(currency.instance); await settle();
+    const currencyResult = widget('currency').el.querySelector('.result'); currencyResult.value='37.5'; currencyResult.dispatchEvent(new Event('input'));
+    assert('currency converter supports reverse input',Number(widget('currency').prefs.amount) === 37.5);
+    const stock = widget('stocks'); stock.el.querySelector('[data-index="0"]').click(); await settle();
+    assert('Stocks selected row collapses chart',stock.prefs.expanded === false && stock.el.querySelector('.stock-detail').inert);
+    stock.el.querySelector('[data-index="1"]').click(); await settle();
+    assert('Stocks selecting another row expands its chart',stock.prefs.expanded === true && stock.prefs.selected === 1);
+    stock.el.querySelector('.stock-change').click(); assert('Stocks change badge switches units',stock.prefs.changeMode === 'Points');
+    const dict = widget('dictionary'), sources = await native('dictionaries');
+    assert('installed dictionary source enumeration has fallback',Array.isArray(sources) && sources.some(source=>source.id === ''));
+    const dictInput = dict.el.querySelector('input'); dictInput.value='dashboard'; dict.el.querySelector('form').dispatchEvent(new Event('submit',{cancelable:true}));
+    for (let i=0;i<30 && !dict.prefs.result;i++) await new Promise(resolve=>setTimeout(resolve,100));
+    assert('Dictionary expands for live native lookup',dict.instance.height === 245 && dict.prefs.result?.length > 30);
+    await settle(); dict.root.style.zIndex=++z;
+    const gripRect=dict.el.querySelector('.widget-resize').getBoundingClientRect();
+    assert('resize handle receives pointer events without info-button overlap',document.elementFromPoint(gripRect.x+gripRect.width/2,gripRect.y+gripRect.height/2)?.closest('.widget-resize') === dict.el.querySelector('.widget-resize'));
+    dict.el.querySelector('.widget-resize').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));
+    assert('Dictionary keyboard resize persists dimensions',dict.prefs.resultSize?.height === 255);
+    dictInput.value=''; dictInput.dispatchEvent(new Event('input')); await settle();
+    assert('Dictionary clears and collapses',dict.instance.height === 37 && dict.prefs.result === '');
+    const translation = widget('translation'); Object.assign(translation.prefs,{from:'English',to:'French',text:'Hello',result:'Bonjour'}); rerender(translation.instance); widget('translation').el.querySelector('.swap').click();
+    assert('translation reverses text and languages together',widget('translation').prefs.from === 'French' && widget('translation').prefs.text === 'Bonjour' && widget('translation').prefs.result === 'Hello');
+    const clip = widget('webclip'), clipWidth = clip.instance.width; clip.el.querySelector('.widget-resize').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));
+    assert('Web Clip resize persists',clip.instance.width === clipWidth + 10 && clip.prefs.size.width === clipWidth + 10);
+    // Exercise permission-gated UI with explicit fixtures, without requesting the user's library or contacts.
+    const actualNative = Dashboard.native, musicCalls = [];
+    try {
+      Dashboard.native = async (action,data) => {
+        if(action === 'contacts') return [{name:'Example Person',email:'example@example.com',phone:'555-0100'}];
+        if(action === 'musicPlaylists') return [{id:'0000000000000001',name:'Example playlist'}];
+        if(action === 'music') { musicCalls.push(data); return {state:'playing',title:'Example song',artist:'Example artist',volume:String(data.volume ?? 40)}; }
+        return actualNative(action,data);
+      };
+      const address = widget('contacts'); address.el.querySelector('input').value='Example'; address.el.querySelector('form').dispatchEvent(new Event('submit',{cancelable:true})); await settle();
+      address.el.querySelector('.contact-choice').click();
+      assert('Address Book opens a selected contact card',address.el.querySelector('.contact-result').textContent.includes('example@example.com'));
+      address.el.querySelector('.contact-back').click(); assert('Address Book returns to result list',!!address.el.querySelector('.contact-choice'));
+      address.el.querySelector('input').value=''; address.el.querySelector('input').dispatchEvent(new Event('input')); await settle();
+      assert('Address Book clears and collapses',address.instance.height === 79 && address.el.querySelector('.contact-results').hidden);
+      const music = widget('music'); music.el.querySelector('.menu').click(); await settle();
+      assert('Music MENU opens playlists',music.el.querySelector('[data-playlist]').textContent === 'Example playlist');
+      music.el.querySelector('[data-playlist]').click(); await settle();
+      assert('Music plays selected playlist and reflects pause state',musicCalls.at(-1).playlist === '0000000000000001' && music.el.querySelector('.play').getAttribute('aria-label') === 'Pause' && music.el.querySelector('.play svg path'));
+      const volume=music.el.querySelector('.music-volume'); volume.value='65'; volume.dispatchEvent(new Event('change')); await settle();
+      assert('Music volume slider dispatches bounded volume',musicCalls.at(-1).command === 'volume' && musicCalls.at(-1).volume === 65);
+    } finally { Dashboard.native=actualNative; rerender(widget('music').instance); }
     const originalTheme = state.settings.texture;
     const idsBefore = [...mounted.keys()], framesBefore = [...document.querySelectorAll('.custom-frame')];
     setTheme('liquid');
     await new Promise(resolve => setTimeout(resolve, 450));
     assert('Liquid Glass theme covers every bundled widget', [...mounted.values()].filter(ctx => !definition(ctx.instance.type).html).every(ctx => parseFloat(getComputedStyle(ctx.el.firstElementChild).borderRadius) >= 17));
-    assert('current Apple widget size families', state.widgets.find(widget => widget.type === 'weather').width === 348 && state.widgets.find(widget => widget.type === 'calendar').width === 170 && state.widgets.find(widget => widget.type === 'clock').height === 170);
+    assert('current Apple widget size families', state.widgets.find(widget => widget.type === 'weather').width === 348 && state.widgets.find(widget => widget.type === 'calendar').width === 348 && state.widgets.find(widget => widget.type === 'clock').height === 170);
+    widget('calendar').el.querySelector('.date-page').click(); await settle();
+    assert('modern calendar collapses to a square date tile',widget('calendar').instance.width === 170 && widget('calendar').instance.height === 170);
+    setTheme('leopard'); assert('calendar collapse survives theme changes',widget('calendar').instance.width === 141 && widget('calendar').prefs.expanded === false);
+    setTheme('liquid'); widget('calendar').el.querySelector('.date-page').click(); await settle();
     assert('theme switch retains widget instances and frames', idsBefore.every(id => mounted.has(id)) && framesBefore.every(frame => frame.isConnected));
     assert('calculator remains legible in Liquid Glass', getComputedStyle(calcRoot.querySelector('[data-key="7"]')).color === 'rgb(255, 255, 255)');
     for (const button of document.querySelectorAll('#controls .round-control,#right-controls .round-control')) {

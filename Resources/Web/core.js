@@ -7,6 +7,11 @@
     clear() { this.display = '0'; this.stored = null; this.operator = null; this.fresh = true; this.lastOperand = null; this.lastOperator = null; }
     apply(a, b, op) { return ({ '+': () => a + b, '−': () => a - b, '×': () => a * b, '÷': () => b === 0 ? NaN : a / b })[op]?.() ?? b; }
     format(number) { return Number.isFinite(number) ? String(Number(number.toPrecision(12))) : 'Error'; }
+    enter(text) {
+      const value = String(text).trim().replace(/−/g, '-').replace(/,/g, '');
+      if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(value) || !Number.isFinite(Number(value))) return false;
+      this.display = this.format(Number(value)); this.fresh = false; return true;
+    }
     press(key) {
       if (/^\d$/.test(key)) { this.display = this.fresh || this.display === '0' || this.display === 'Error' ? key : (this.display.length < 14 ? this.display + key : this.display); this.fresh = false; }
       else if (key === '.') { if (this.fresh || this.display === 'Error') this.display = '0'; if (!this.display.includes('.')) this.display += '.'; this.fresh = false; }

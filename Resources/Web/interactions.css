@@ -1,0 +1,65 @@
+/* Intrinsic widget layouts must remain stable while their host animates size. */
+.calendar-face .date-page { display: flex; flex-direction: column; justify-content: flex-start; width: 135px; border: 0; border-radius: 0; color: inherit; font: inherit; cursor: pointer; padding: 7px 2px; }
+.calendar-face .date-weekday,.calendar-face .date-number { display: block; }
+.calendar-face .month-page { flex: none; width: 159px; border-left: 4px solid #929292; }
+.calendar-face .month-title { width: auto; height: auto; padding: 0; font: inherit; color: inherit; }
+.calendar-collapsed .date-page { box-shadow: none; }
+.liquid .calendar-face { display: flex; padding: 0; }
+.liquid .calendar-face .date-page { display: flex; width: 168px; height: 168px; padding: 19px 14px; background: transparent; box-shadow: none; border: 0; justify-content: center; }
+.liquid .calendar-face .date-weekday { font: 500 13px/20px -apple-system,sans-serif; color: #fff; }
+.liquid .calendar-face .date-number { font: 300 78px/94px -apple-system,sans-serif; letter-spacing: -2px; padding: 0; text-shadow: none; }
+.liquid .calendar-face .month-page { width: 178px; padding: 16px 15px 13px; border: 0; }
+.liquid .calendar-face .month-header .month-title { position: static; opacity: 1; font-size: 10px; width: auto; height: auto; }
+.liquid .calendar-face .month-header [data-month] { width: 19px; height: 19px; }
+.liquid .calendar-face .month-header [data-month='-1'] { right: 17px; }
+[data-drag-toggle] { touch-action: none; }
+[data-drag-toggle]:active { cursor: grabbing; }
+.widget-resize { position: absolute; z-index: 4; right: 2px; bottom: 2px; width: 20px; height: 20px; padding: 0; border: 0; background: none; cursor: nwse-resize; touch-action: none; }
+.widget-resize::after { content: ''; position: absolute; inset: 5px 1px 1px 5px; background: repeating-linear-gradient(135deg,transparent 0 3px,#6669 3px 4px); clip-path: polygon(100% 0,100% 100%,0 100%); pointer-events: none; }
+.liquid .widget-resize::after { background: repeating-linear-gradient(135deg,transparent 0 3px,#fffa 3px 4px); }
+.widget:has(.widget-resize:not([hidden])) .widget-info { right: 26px; bottom: 5px; }
+.weather-top[role=button] { cursor: pointer; outline-offset: -3px; }
+.weather-face .forecast { transition: clip-path 340ms cubic-bezier(.2,.8,.2,1); clip-path: inset(0); }
+.weather-collapsed .forecast { clip-path: inset(0 0 100% 0); pointer-events: none; }
+.forecast-low { display: block; font-size: 9px; font-weight: 400; color: #e1e9f3; line-height: 13px; }
+.liquid .weather-face .forecast { width: 160px; right: auto; }
+.liquid .weather-collapsed .forecast { clip-path: inset(0 100% 0 0); }
+.liquid .forecast-low { display: inline; font-size: 10px; margin-left: 5px; color: #ffffffb8; }
+.widget-back label.checkbox { display: flex; flex-direction: row; align-items: center; gap: 7px; }
+.widget-back label.checkbox input { width: 14px; min-height: 14px; height: 14px; }
+.dictionary-source { flex: 0 0 110px; min-width: 0; max-width: 140px; font: 14px Georgia,serif; color: #fff6e5; background: transparent; border: 0; text-overflow: ellipsis; }
+.dictionary-face { height: 100%; display: flex; flex-direction: column; }
+.dictionary-result { flex: 1; max-height: none; min-height: 0; padding-bottom: 24px; }
+.dictionary-result:empty { display: none; }
+.liquid .dictionary-source { flex-basis: auto; width: 100%; max-width: none; font: 500 15px -apple-system,sans-serif; color: #fff; }
+.liquid .dictionary-result { max-height: none; }
+.liquid .dictionary-bar { gap: 9px; }
+.stock-select { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; height: 100%; padding: 0; color: inherit; font: inherit; background: transparent; border: 0; }
+.stock-change { color: inherit; font-size: inherit; cursor: pointer; }
+.stock-detail { transition: opacity 160ms ease; }
+.stocks-collapsed .stock-detail { opacity: 0; pointer-events: none; }
+.contact-choice { display: block; width: 100%; text-align: left; padding: 10px 2px; color: inherit; font: inherit; border: 0; border-bottom: 1px solid #8884; background: transparent; }
+.contact-choice:hover { background: #8882; }
+.address-face { height: 100%; }
+.contact-results { max-height: calc(100% - 69px); }
+.liquid .contact-results { max-height: calc(100% - 85px); }
+.webclip-face .clip { position: relative; overflow: hidden; }
+.clip-pan { position: absolute; inset: 0; width: 100%; height: 100%; display: grid; place-items: center; border: 1px dashed #fff; background: #0003; cursor: grab; touch-action: none; }
+.clip-pan:active { cursor: grabbing; }
+.clip-pan span { padding: 7px 11px; border-radius: 6px; color: white; background: #262626e8; font: 12px -apple-system,sans-serif; }
+.webclip-title { gap: 6px; padding-right: 50px; }
+.webclip-title>span { margin-right: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.music-face { position: relative; }
+.music-screen strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+.music-screen>span:not(.classic-only):not(.modern-only) { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.music-volume { display: block; width: 100%; height: 14px; padding: 0; margin: 4px 0 0; accent-color: #557d9e; }
+.music-library { position: absolute; inset: 13px; border: 1px solid #8898a6; border-radius: 5px; padding: 7px; background: #d5e2ed; color: #253342; font: 12px -apple-system,sans-serif; }
+.music-playlists { height: calc(100% - 29px); overflow: auto; margin-top: 5px; }
+.music-playlists button { display: block; width: 100%; padding: 7px 2px; border: 0; border-bottom: 1px solid #8898a655; background: transparent; color: inherit; text-align: left; font: inherit; }
+.music-playlists button:hover { background: #557d9e22; }
+.liquid .music-library { inset: 9px; padding: 10px; border-radius: 15px; border: 0; background: #30343df7; color: white; }
+.liquid .music-screen strong { margin-bottom: 3px; }
+.liquid .music-volume { accent-color: white; }
+.liquid .music-artwork { color: white; cursor: pointer; }
+.reduced-motion .stock-detail,.reduced-motion .weather-face .forecast { transition: none; }
+@media (prefers-reduced-motion: reduce) { .stock-detail,.weather-face .forecast { transition: none; } }

@@ -18,6 +18,19 @@ test('calculator decimal, memory, operator replacement and percentage', () => {
   for (const key of ['c', '5', '+', '×', '2', '=']) c.press(key);
   assert.equal(c.display, '10'); c.press('%'); assert.equal(c.display, '0.1');
 });
+test('calculator accepts pasted numbers without losing pending operations or memory', () => {
+  const c = new Calculator();
+  assert.equal(c.enter(' −1,234.50 '), true); assert.equal(c.display, '-1234.5');
+  c.press('m+'); c.press('c'); c.press('2'); c.press('+');
+  assert.equal(c.enter('3e2'), true); c.press('='); assert.equal(c.display, '302');
+  c.press('mr'); assert.equal(c.display, '-1234.5');
+});
+test('calculator rejects non-numeric clipboard input without changing its value', () => {
+  const c = new Calculator(); c.enter('42');
+  for (const text of ['', '   ', 'Infinity', '1e999', '12 apples', '<script>', '2+3', '--4']) {
+    assert.equal(c.enter(text), false, text); assert.equal(c.display, '42');
+  }
+});
 test('unit conversions include offsets and precision', () => {
   assert.equal(convert(32, 'Temperature', 'Fahrenheit', 'Celsius'), 0);
   assert.equal(convert(0, 'Temperature', 'Celsius', 'Kelvin'), 273.15);

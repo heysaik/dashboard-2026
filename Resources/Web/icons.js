@@ -3,6 +3,7 @@ const Icons = (() => {
   const paths = {
     plus: '<path d="M12 5v14M5 12h14"/>',
     minus: '<path d="M5 12h14"/>',
+    pause: '<path d="M7 5h3v14H7zM14 5h3v14h-3z" fill="currentColor" stroke="none"/>',
     close: '<path d="m6 6 12 12M18 6 6 18"/>',
     info: '<path d="M12 11v6"/><circle cx="12" cy="7" r=".8" fill="currentColor" stroke="none"/>',
     arrow: '<path d="M4 12h15m-6-6 6 6-6 6"/>',

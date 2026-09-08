@@ -18,6 +18,12 @@ Verified on September 8, 2026, on an Apple Silicon Mac running macOS 27.0, build
 
 The September 8 material refinement was also built and visually checked in both themes. The modern wallpaper blur, native SF Symbols, compact toolbar, and neutral Settings surfaces were inspected. The Leopard shelf's label area and weather, clock, calculator, and note thumbnails were checked at their actual size. All six core tests and 27 integration checks passed again, including full-display sizing and Space pinning.
 
+The interaction restoration passed eight core tests and 60 native WebKit integration checks. New checks cover calendar collapse/expand, rapid toggles, month/date selection, usable settings while collapsed, saved expansion across themes, Weather keyboard toggling, calculator copy/paste, reverse unit/currency input, Stocks chart toggling and units, installed Dictionary sources, live offline lookup and resizing, translation reversal, Web Clip resizing, World Clock city selection, and pointer access to the resize handle. Full-screen sizing and Space pinning passed again.
+
+Address Book result/card/back/clear behavior and Music playlist selection, play/pause state, and volume dispatch were checked with explicit synthetic fixtures. These tests do not read Contacts or Music libraries. Seven native Music scripts compiled successfully against the installed Music scripting dictionary without execution. Live Music playback and personal Contacts access remain untested.
+
+Native UI review confirmed calendar square/rectangle transitions in both themes, dragging the date without toggling it, modern Weather’s compact layout, and Web Clip page-position dragging with its saved crop restored on reopening. The installed calendar was clicked closed and open after installation. Widget IDs, custom definitions and the selected theme were preserved. Source and reference details, plus historical parity differences, are recorded in [the interaction audit](Interactions.md).
+
 Automated tests use a separate `DASHBOARD_DATA_DIR`, preserving the installed app's layout. Raw diagnostic results and screenshots stay in the ignored `artifacts/` folder because screenshots may include the user's desktop picture.
 
 ## Limits

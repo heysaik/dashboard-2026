@@ -43,19 +43,19 @@ A Dashboard Space covers the full display, including the strip beside a MacBook'
 
 | Widget | Behavior |
 | --- | --- |
-| Weather | Live six-day Open-Meteo forecast; city search; °C / °F |
+| Weather | Click conditions to expand/collapse the six-day forecast; city search, °C / °F, optional forecast lows |
 | World Clock | Analog clock, seconds hand, day/night case, selectable cities |
-| iCal | Flip-style date, month navigation, day selection, leap-year handling |
-| Calculator | Arithmetic, memory, keyboard input, repeated equals; saved display |
+| iCal | Click the date to slide between a square date tile and full month; day selection, month arrows, return to today |
+| Calculator | Arithmetic, memory, keyboard input, copy/paste, repeated equals; saved display |
 | Stickies | Persistent notes, five paper colors, fonts and sizes |
-| Dictionary | Local macOS dictionaries; offline lookup |
-| Unit Converter | Ten offline measurement categories |
-| Currency Converter | Daily ECB reference exchange rates via Frankfurter |
-| Stocks | Delayed Yahoo quotes and selectable chart ranges; explicit unavailable states |
-| Translation | Selected LLM provider translates between 13 languages |
-| Address Book | Searches local Contacts after the user grants access |
+| Dictionary | Type-ahead lookup, installed dictionary/thesaurus picker, collapsible results and resize handle |
+| Unit Converter | Ten offline categories; edit either value to convert in either direction |
+| Currency Converter | Daily ECB rates via Frankfurter; edit either amount |
+| Stocks | Expand/collapse selected chart, saved stock/range selection, percent/points toggle, delayed Yahoo quotes |
+| Translation | Selected LLM translates between 11 languages; reverse text/languages, Command–Return to translate |
+| Address Book | Local search, select a contact card, return to results; clearing collapses the widget |
 | Tile Game | Solvable 15-puzzle, photo or numbers, new game and move count |
-| iTunes | Original-style controller for the current Music app |
+| iTunes | Music transport, volume slider, MENU playlist picker and actual play/pause state |
 | Google | Search in the default browser |
 | Business | Business lookup with Apple Maps |
 | People | Browser-based Whitepages directory lookup |
@@ -63,7 +63,9 @@ A Dashboard Space covers the full display, including the strip beside a MacBook'
 | ESPN | ESPN scoreboard by league; refreshes every two minutes |
 | Ski Report | Mountain weather and forecast snowfall; lift/trail feed is retired |
 | Movies | Apple movie catalog search; original cinema showtimes are retired |
-| Web Clip | Embedded website with browser fallback for sites that block embedding |
+| Web Clip | Resize, position and scale a clipped page; browser fallback for sites that block embedding |
+
+See the [interaction guide and parity audit](docs/Interactions.md) for every widget’s controls and the remaining differences from Leopard.
 
 Manage Widgets controls which definitions appear in the shelf. All widgets support multiple instances and saved positions. Generated widgets also have per-instance saved state, export, import, and remix.
 

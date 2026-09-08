@@ -38,11 +38,13 @@ import WebKit
         case "open":
             guard let url = URL(string: data["url"] as? String ?? ""), ["https", "http", "dict", "music"].contains(url.scheme ?? "") else { throw DashboardError.message("This link cannot be opened.") }
             NSWorkspace.shared.open(url); return true
+        case "dictionaries": return DSDictionarySources()
         case "dictionary":
             let word = String((data["word"] as? String ?? "").prefix(120))
-            return DCSCopyTextDefinition(nil, word as CFString, CFRange(location: 0, length: (word as NSString).length))?.takeRetainedValue() as String? ?? "No definition found. Try another word, or enable a dictionary in the Dictionary app."
+            return DSDefinition(word, data["source"] as? String ?? "")
         case "contacts": return try await contacts(data["query"] as? String ?? "")
-        case "music": return try music(data["command"] as? String ?? "status")
+        case "music": return try music(data["command"] as? String ?? "status", volume: data["volume"] as? Int, playlist: data["playlist"] as? String)
+        case "musicPlaylists": return try musicPlaylists()
         case "providers": return await generator.providers(endpoint: data["endpoint"] as? String ?? "http://127.0.0.1:1234/v1")
         case "generate", "translate":
             let raw = try await generator.generate(prompt: data["prompt"] as? String ?? "", provider: data["provider"] as? String ?? "codex", endpoint: data["endpoint"] as? String ?? "http://127.0.0.1:1234/v1", model: data["model"] as? String ?? "", widget: action == "generate", theme: data["theme"] as? String ?? "leopard")
@@ -98,21 +100,51 @@ import WebKit
         let keys = [CNContactGivenNameKey, CNContactFamilyNameKey, CNContactEmailAddressesKey, CNContactPhoneNumbersKey].map { $0 as CNKeyDescriptor }
         return try contacts.unifiedContacts(matching: CNContact.predicateForContacts(matchingName: String(query.prefix(100))), keysToFetch: keys).prefix(15).map { contact in ["name": "\(contact.givenName) \(contact.familyName)", "email": contact.emailAddresses.first?.value as String? ?? "", "phone": contact.phoneNumbers.first?.value.stringValue ?? ""] }
     }
-    func music(_ command: String) throws -> [String: String] {
+    func music(_ command: String, volume: Int? = nil, playlist: String? = nil) throws -> [String: String] {
         let commands = ["playpause": "playpause", "next": "next track", "previous": "previous track", "status": ""]
-        guard let action = commands[command] else { throw DashboardError.message("Unknown playback control.") }
+        let action: String
+        if command == "volume", let volume, (0...100).contains(volume) { action = "set sound volume to \(volume)" }
+        else if command == "playlist", let playlist, playlist.range(of: "^[A-Fa-f0-9]{16}$", options: .regularExpression) != nil {
+            action = "play (first user playlist whose persistent ID is \"\(playlist)\")"
+        } else if let control = commands[command] { action = control }
+        else { throw DashboardError.message("Unknown playback control.") }
         let source = """
         tell application "Music"
             \(action)
-            if player state is stopped then return "Stopped" & linefeed & "Open Music and choose a song" & linefeed & ""
-            return (player state as string) & linefeed & (name of current track) & linefeed & (artist of current track)
+            if player state is stopped then return {"Stopped", "Choose a song", "", sound volume as string}
+            return {player state as string, name of current track, artist of current track, sound volume as string}
         end tell
         """
+        let result = try executeMusic(source)
+        return ["state": result.atIndex(1)?.stringValue ?? "Stopped", "title": result.atIndex(2)?.stringValue ?? "Music", "artist": result.atIndex(3)?.stringValue ?? "", "volume": result.atIndex(4)?.stringValue ?? "50"]
+    }
+    func musicPlaylists() throws -> [[String: String]] {
+        let result = try executeMusic("""
+        tell application "Music"
+            set choices to {}
+            repeat with itemPlaylist in user playlists
+                if class of itemPlaylist is not folder playlist then
+                    set end of choices to {persistent ID of itemPlaylist, name of itemPlaylist}
+                end if
+            end repeat
+            return choices
+        end tell
+        """)
+        guard result.numberOfItems > 0 else { return [] }
+        return (1...result.numberOfItems).compactMap { index in
+            guard let item = result.atIndex(index), let id = item.atIndex(1)?.stringValue, let name = item.atIndex(2)?.stringValue else { return nil }
+            return ["id": id, "name": name]
+        }
+    }
+    private func executeMusic(_ source: String) throws -> NSAppleEventDescriptor {
         var error: NSDictionary?
         let result = NSAppleScript(source: source)?.executeAndReturnError(&error)
-        if error != nil { throw DashboardError.message("Allow Dashboard to control Music in System Settings → Privacy & Security → Automation, then try again.") }
-        let parts = (result?.stringValue ?? "").components(separatedBy: "\n")
-        return ["state": parts.first ?? "Stopped", "title": parts.count > 1 ? parts[1] : "Music", "artist": parts.count > 2 ? parts[2] : ""]
+        if let error {
+            if error[NSAppleScript.errorNumber] as? Int == -1743 { throw DashboardError.message("Allow Dashboard to control Music in System Settings → Privacy & Security → Automation, then try again.") }
+            throw DashboardError.message("Music could not complete that action. Open Music, check the playlist or track, and try again.")
+        }
+        guard let result else { throw DashboardError.message("Music did not respond. Try again.") }
+        return result
     }
 }
 

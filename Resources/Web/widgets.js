@@ -18,25 +18,53 @@ const Widgets = (() => {
   const weatherIcon = thumbnail(`<defs><linearGradient id="shelf-weather" x2="0" y2="1"><stop stop-color="#839fb9"/><stop offset="1" stop-color="#27496a"/></linearGradient><radialGradient id="shelf-sun"><stop stop-color="#fffde0"/><stop offset=".7" stop-color="#ffe067"/><stop offset="1" stop-color="#ffc13e"/></radialGradient></defs><rect x="2" y="12" width="60" height="48" rx="5" fill="url(#shelf-weather)" stroke="#344d66"/><circle cx="23" cy="23" r="17" fill="url(#shelf-sun)"/><text x="57" y="34" text-anchor="end" fill="#fff" font-family="Helvetica Neue,Helvetica" font-size="15" font-weight="300">73°</text><path d="M4 42h56" stroke="#b0c2d344"/>${[12,32,52].map((x,i)=>`<text x="${x}" y="48" text-anchor="middle" fill="#fff" font-family="Helvetica" font-size="4.1">${['MON','TUE','WED'][i]}</text><circle cx="${x}" cy="54" r="2.7" fill="#ffe06b"/>`).join('')}`);
   const fetchJSON = url => Dashboard.native('fetch', { url });
   const serviceError = (ctx, error, retry) => { ctx.el.innerHTML = `<div class="service-error">${e(error.message || error)}${retry ? '<button class="silver-button">Try Again</button>' : ''}</div>`; if (retry) ctx.el.querySelector('button').onclick = retry; };
-  const setDynamicHeight = (ctx, height) => { ctx.resize(ctx.instance.width, Dashboard.state.settings.texture === 'liquid' ? Math.max(170,height) : height); };
+  function resizeGrip(ctx, changed, minimum = [240,150]) {
+    const grip = document.createElement('button'); grip.className = 'widget-resize'; grip.title = 'Drag to resize'; grip.setAttribute('aria-label','Resize widget'); ctx.el.append(grip);
+    const update = (width,height) => { width = Core.clamp(width,minimum[0],800); height = Core.clamp(height,minimum[1],700); changed(width,height); ctx.resize(width,height); };
+    grip.onpointerdown = event => {
+      event.preventDefault(); event.stopPropagation(); grip.setPointerCapture(event.pointerId);
+      const start = { x:event.clientX,y:event.clientY,width:ctx.instance.width,height:ctx.instance.height };
+      const move = event => update(start.width+(event.clientX-start.x)/Dashboard.state.settings.scale,start.height+(event.clientY-start.y)/Dashboard.state.settings.scale);
+      const end = () => { grip.removeEventListener('pointermove',move); grip.removeEventListener('pointerup',end); grip.removeEventListener('pointercancel',end); };
+      grip.addEventListener('pointermove',move); grip.addEventListener('pointerup',end); grip.addEventListener('pointercancel',end);
+    };
+    grip.onkeydown = event => { if (event.key.startsWith('Arrow')) { event.preventDefault(); event.stopPropagation(); update(ctx.instance.width+(event.key==='ArrowRight'?10:event.key==='ArrowLeft'?-10:0),ctx.instance.height+(event.key==='ArrowDown'?10:event.key==='ArrowUp'?-10:0)); } };
+    return grip;
+  }
   function weatherArt(code, day = true) { if (!day && code <= 2) return '<div class="moon"></div>'; if (code === 0 || code === 1) return '<div class="sun"></div>'; if (code === 2) return '<div class="sun"></div><div class="cloud"></div>'; return `<div class="cloud"></div>${code >= 51 ? '<span style="position:absolute;top:28px;left:18px;color:#cbe7ff;font-size:20px">╱ ╱ ╱</span>' : ''}`; }
   const miniWeather = code => `<div class="mini-weather">${code < 3 ? '<div class="sun"></div>' : '<div class="cloud"></div>'}</div>`;
   function weatherURL(prefs, extra = '') { return `https://api.open-meteo.com/v1/forecast?latitude=${Number(prefs.latitude)}&longitude=${Number(prefs.longitude)}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min${extra}&temperature_unit=${prefs.unit === 'Celsius' ? 'celsius' : 'fahrenheit'}&timezone=auto&forecast_days=6`; }
-  function locationSettings(prefs) { return `${input('city', 'City', prefs.city)}<button type="button" class="silver-button find-city">Find City</button><div class="location-results"></div>${select('unit', 'Temperature', ['Fahrenheit', 'Celsius'], prefs.unit)}<p>Forecasts from Open-Meteo.</p>`; }
+  function locationSettings(prefs) { return `${input('city', 'City', prefs.city)}<button type="button" class="silver-button find-city">Find City</button><div class="location-results"></div>${select('unit', 'Temperature', ['Fahrenheit', 'Celsius'], prefs.unit)}${'showLows' in prefs ? `<label class="checkbox"><input type="checkbox" data-setting="showLows" ${prefs.showLows ? 'checked' : ''}>Show forecast lows</label>` : ''}<p>Forecasts from Open-Meteo.</p>`; }
 
   register('weather', 'Weather', 246, 150, weatherIcon, ctx => {
     ctx.el.innerHTML = '<div class="weather-face"><div class="weather-top"><div class="weather-place">' + e(ctx.prefs.city) + '</div><div class="weather-temp">—°</div></div><div class="weather-error">Updating forecast…</div></div>';
+    const fit = animated => {
+      const liquid = Dashboard.state.settings.texture === 'liquid', expanded = ctx.prefs.expanded !== false;
+      ctx.root.classList.toggle('weather-collapsed', !expanded);
+      const forecast = ctx.el.querySelector('.forecast'); if (forecast) forecast.inert = !expanded;
+      const toggle = ctx.el.querySelector('.weather-top');
+      if (toggle) { toggle.setAttribute('aria-expanded', expanded); toggle.setAttribute('aria-label', `${ctx.prefs.city}. ${expanded ? 'Hide' : 'Show'} six-day forecast`); }
+      ctx.resize(liquid ? (expanded ? 348 : 170) : 246, liquid ? 170 : expanded ? (ctx.prefs.showLows ? 164 : 150) : 90, animated);
+    };
+    const bind = () => {
+      const toggle = ctx.el.querySelector('.weather-top');
+      if (toggle) { toggle.dataset.dragToggle = ''; toggle.tabIndex = 0; toggle.setAttribute('role','button'); toggle.title = 'Show or hide the six-day forecast'; toggle.onclick = () => { ctx.prefs.expanded = ctx.prefs.expanded === false; fit(true); }; toggle.onkeydown = event => { if (['Enter',' '].includes(event.key)) { event.preventDefault(); event.stopPropagation(); toggle.click(); } }; }
+      fit(false);
+    };
+    bind(); ctx.onTheme(() => fit(false));
     const load = async () => {
       try {
         const data = await fetchJSON(weatherURL(ctx.prefs)); if (!ctx.alive()) return;
         if (!data.current || !data.daily) throw new Error('Forecast is unavailable for this location.');
-        ctx.el.innerHTML = `<div class="weather-face"><div class="weather-top"><div class="weather-place">${e(ctx.prefs.city)}<div class="weather-hi-lo">H: ${Math.round(data.daily.temperature_2m_max[0])}°<span class="classic-break"><br></span> L: ${Math.round(data.daily.temperature_2m_min[0])}°</div></div><div class="weather-art">${weatherArt(data.current.weather_code, data.current.is_day)}</div><div class="weather-condition modern-only">${data.current.weather_code < 2 ? (data.current.is_day ? 'Sunny' : 'Clear') : data.current.weather_code < 4 ? 'Partly Cloudy' : data.current.weather_code >= 71 && data.current.weather_code <= 77 ? 'Snow' : data.current.weather_code >= 51 ? 'Rain' : 'Cloudy'}</div><div class="weather-temp">${Math.round(data.current.temperature_2m)}°</div></div><div class="forecast">${data.daily.time.slice(0, 6).map((date, index) => `<div class="forecast-day"><div class="day">${new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}</div>${miniWeather(data.daily.weather_code[index])}<div class="temp">${Math.round(data.daily.temperature_2m_max[index])}°</div></div>`).join('')}</div></div>`;
+        ctx.el.innerHTML = `<div class="weather-face"><div class="weather-top"><div class="weather-place">${e(ctx.prefs.city)}<div class="weather-hi-lo">H: ${Math.round(data.daily.temperature_2m_max[0])}°<span class="classic-break"><br></span> L: ${Math.round(data.daily.temperature_2m_min[0])}°</div></div><div class="weather-art">${weatherArt(data.current.weather_code, data.current.is_day)}</div><div class="weather-condition modern-only">${data.current.weather_code < 2 ? (data.current.is_day ? 'Sunny' : 'Clear') : data.current.weather_code < 4 ? 'Partly Cloudy' : data.current.weather_code >= 71 && data.current.weather_code <= 77 ? 'Snow' : data.current.weather_code >= 51 ? 'Rain' : 'Cloudy'}</div><div class="weather-temp">${Math.round(data.current.temperature_2m)}°</div></div><div class="forecast">${data.daily.time.slice(0, 6).map((date, index) => `<div class="forecast-day"><div class="day">${new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}</div>${miniWeather(data.daily.weather_code[index])}<div class="temp">${Math.round(data.daily.temperature_2m_max[index])}°${ctx.prefs.showLows ? `<small class="forecast-low">${Math.round(data.daily.temperature_2m_min[index])}°</small>` : ''}</div></div>`).join('')}</div></div>`;
+        bind();
         ctx.el.title = `Open-Meteo · updated ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
       } catch (error) { if (ctx.alive()) { ctx.el.querySelector('.weather-face').innerHTML = `<div class="weather-error">${e(ctx.prefs.city)}<br>${e(error.message)}<br><button class="silver-button">Try Again</button></div>`; ctx.el.querySelector('button').onclick = load; } }
     }; load(); ctx.interval(load, 900000);
-  }, locationSettings, { city: 'Cupertino', latitude: 37.323, longitude: -122.032, unit: 'Fahrenheit' });
+  }, locationSettings, { city: 'Cupertino', latitude: 37.323, longitude: -122.032, unit: 'Fahrenheit', expanded: true, showLows: false });
 
   const zones = { Cupertino: 'America/Los_Angeles', 'San Francisco': 'America/Los_Angeles', 'Los Angeles': 'America/Los_Angeles', 'New York': 'America/New_York', Chicago: 'America/Chicago', London: 'Europe/London', Paris: 'Europe/Paris', Berlin: 'Europe/Berlin', Tokyo: 'Asia/Tokyo', Singapore: 'Asia/Singapore', Sydney: 'Australia/Sydney', Mumbai: 'Asia/Kolkata', Dubai: 'Asia/Dubai', UTC: 'UTC' };
+  for (const zone of Intl.supportedValuesOf?.('timeZone') || []) { const city = zone.split('/').at(-1).replace(/_/g,' '); zones[city] ||= zone; }
   register('clock', 'World Clock', 140, 148, clockIcon, ctx => {
     const marks = Array.from({ length: 60 }, (_, i) => { const angle = i * Math.PI / 30; const inner = i % 5 ? 46 : 43; return `<line x1="${55 + Math.sin(angle) * inner}" y1="${55 - Math.cos(angle) * inner}" x2="${55 + Math.sin(angle) * 48}" y2="${55 - Math.cos(angle) * 48}" stroke="#222" stroke-width="${i % 5 ? .45 : 1}"/>`; }).join('');
     const numbers = Array.from({ length: 12 }, (_, i) => { const n = i + 1, a = n * Math.PI / 6; return `<text x="${55 + Math.sin(a) * 35}" y="${59 + -Math.cos(a) * 35}" text-anchor="middle" font-family="Helvetica Neue,Arial" font-size="12" fill="#202020">${n}</text>`; }).join('');
@@ -47,18 +75,35 @@ const Widgets = (() => {
       for (const [name, angle] of [['hour', (h % 12) * 30 + m / 2], ['minute', m * 6 + s / 10], ['second', s * 6]]) ctx.el.querySelector('.' + name).setAttribute('transform', `rotate(${angle} 55 55)`);
       ctx.el.querySelector('.clock-period').textContent = h < 12 ? 'AM' : 'PM'; ctx.el.querySelector('.clock-face').classList.toggle('night', h < 6 || h >= 19);
     }; tick(); ctx.interval(tick, 1000);
-  }, prefs => select('city', 'City', Object.keys(zones), prefs.city), { city: 'Cupertino' });
+  }, prefs => select('city', 'City', Object.keys(zones).sort(), prefs.city), { city: 'Cupertino' });
 
   register('calendar', 'iCal', 300, 141, calIcon, ctx => {
-    let date = new Date(); let selected = new Date(); let month = date.getMonth(), year = date.getFullYear();
+    const p = ctx.prefs;
+    let today = new Date();
+    let selected = p.selectedDate ? new Date(...p.selectedDate) : new Date();
+    if (!Number.isFinite(selected.getTime())) selected = new Date();
+    let month = Number.isInteger(p.month) ? p.month : today.getMonth(), year = Number.isInteger(p.year) ? p.year : today.getFullYear();
+    const persist = () => { p.month = month; p.year = year; p.selectedDate = [selected.getFullYear(), selected.getMonth(), selected.getDate()]; ctx.save(); };
+    const size = animated => {
+      const liquid = Dashboard.state.settings.texture === 'liquid', expanded = p.expanded !== false;
+      ctx.root.classList.toggle('calendar-collapsed', !expanded);
+      const panel = ctx.el.querySelector('.month-page'); if (panel) panel.inert = !expanded;
+      const toggle = ctx.el.querySelector('.date-page'); if (toggle) { toggle.setAttribute('aria-expanded', expanded); toggle.setAttribute('aria-label', `${selected.toDateString()}. ${expanded ? 'Hide' : 'Show'} month calendar`); }
+      ctx.resize(expanded ? (liquid ? 348 : 300) : (liquid ? 170 : 141), liquid ? 170 : 141, animated);
+    };
+    const goToday = () => { selected = today = new Date(); month = today.getMonth(); year = today.getFullYear(); persist(); render(); };
     const render = () => {
       const cells = calendarCells(year, month);
-      ctx.el.innerHTML = `<div class="calendar-face"><div class="date-page"><div class="date-weekday">${selected.toLocaleDateString('en-US', { weekday: 'long' })}</div><div class="date-number">${selected.getDate()}</div></div><div class="month-page"><div class="month-header"><button aria-label="Previous month" data-month="-1">${Icons.symbol('left')}</button><span class="month-title"><span class="classic-only">${new Date(year, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span><span class="modern-only">${new Date(year, month).toLocaleDateString('en-US', { month: 'long' })}</span></span><button aria-label="Next month" data-month="1">${Icons.symbol('right')}</button></div><div class="month-grid">${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => `<span class="weekday">${d}</span>`).join('')}${cells.map(day => day ? `<button data-day="${day}" class="${day === date.getDate() && month === date.getMonth() && year === date.getFullYear() ? 'today' : ''} ${day === selected.getDate() && month === selected.getMonth() && year === selected.getFullYear() ? 'selected' : ''}" aria-label="${e(new Date(year, month, day).toDateString())}">${day}</button>` : '<span class="blank">·</span>').join('')}</div></div></div>`;
-      ctx.el.querySelectorAll('[data-month]').forEach(button => button.onclick = () => { const next = new Date(year, month + Number(button.dataset.month), 1); year = next.getFullYear(); month = next.getMonth(); render(); });
-      ctx.el.querySelectorAll('[data-day]').forEach(button => button.onclick = () => { selected = new Date(year, month, Number(button.dataset.day)); render(); Dashboard.animate(ctx.el.querySelector('.date-number'), [{ opacity: .25, transform: 'translateY(-5px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 220 }); });
-      ctx.el.querySelector('.date-page').ondblclick = () => { selected = date = new Date(); month = date.getMonth(); year = date.getFullYear(); render(); };
-    }; render(); ctx.interval(() => { const now = new Date(); if (now.toDateString() !== date.toDateString()) { date = selected = now; month = date.getMonth(); year = date.getFullYear(); render(); } }, 60000);
-  }, () => '<p>Click the arrows to browse months. Click a day to turn the date page. Double-click the date to return to today.</p>');
+      ctx.el.innerHTML = `<div class="calendar-face"><button class="date-page" data-drag-toggle aria-expanded="${p.expanded !== false}" title="Show or hide the month calendar"><span class="date-weekday">${selected.toLocaleDateString('en-US', { weekday: 'long' })}</span><span class="date-number">${selected.getDate()}</span></button><div class="month-page"><div class="month-header"><button aria-label="Previous month" data-month="-1">${Icons.symbol('left')}</button><button class="month-title" aria-label="Return to today" title="Return to today"><span class="classic-only">${new Date(year, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span><span class="modern-only">${new Date(year, month).toLocaleDateString('en-US', { month: 'long' })}</span></button><button aria-label="Next month" data-month="1">${Icons.symbol('right')}</button></div><div class="month-grid">${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => `<span class="weekday">${d}</span>`).join('')}${cells.map(day => day ? `<button data-day="${day}" class="${day === today.getDate() && month === today.getMonth() && year === today.getFullYear() ? 'today' : ''} ${day === selected.getDate() && month === selected.getMonth() && year === selected.getFullYear() ? 'selected' : ''}" aria-label="${e(new Date(year, month, day).toDateString())}">${day}</button>` : '<span class="blank">·</span>').join('')}</div></div></div>`;
+      ctx.el.querySelector('.date-page').onclick = () => { p.expanded = p.expanded === false; size(true); persist(); };
+      ctx.el.querySelector('.month-title').onclick = goToday;
+      ctx.el.querySelectorAll('[data-month]').forEach(button => button.onclick = () => { const next = new Date(year, month + Number(button.dataset.month), 1); year = next.getFullYear(); month = next.getMonth(); persist(); render(); ctx.el.querySelector(`[data-month="${button.dataset.month}"]`).focus({ preventScroll: true }); });
+      ctx.el.querySelectorAll('[data-day]').forEach(button => button.onclick = () => { selected = new Date(year, month, Number(button.dataset.day)); persist(); render(); ctx.el.querySelector(`[data-day="${selected.getDate()}"]`).focus({ preventScroll: true }); Dashboard.animate(ctx.el.querySelector('.date-number'), [{ opacity: .25, transform: 'translateY(-5px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 220 }); });
+      size(false);
+    };
+    render(); ctx.onTheme(() => size(false));
+    ctx.interval(() => { const now = new Date(); if (now.toDateString() !== today.toDateString()) goToday(); }, 60000);
+  }, () => '<p>Click the large date to slide the month calendar in or out. Drag the date to move the widget. Browse with the arrows; click the month heading to return to today.</p>', { expanded: true });
 
   register('calculator', 'Calculator', 158, 226, calcIcon, ctx => {
     const calc = new Calculator(); if (ctx.prefs.calculator) { for (const key of ['display','stored','operator','fresh','lastOperand','lastOperator','memory']) if (key in ctx.prefs.calculator) calc[key] = ctx.prefs.calculator[key]; } const memory = ['m+', 'm−', 'mc', 'mr', '÷']; const digits = ['7', '8', '9', '×', '4', '5', '6', '−', '1', '2', '3', '+', '0', '.', 'c', '=']; const keys = [...memory, ...digits, '±', '%', '⌫'];
@@ -66,7 +111,10 @@ const Widgets = (() => {
     ctx.el.innerHTML = `<div class="calculator-face"><output class="calc-display" aria-live="polite">${e(calc.display)}</output><div class="calc-memory">${memory.map(button).join('')}</div><div class="modern-calc-controls modern-only">${['c','±','%','÷'].map(key => button(key).replace('>c<', '>AC<')).join('')}</div><div class="calc-pad">${digits.map(button).join('')}</div></div>`;
     const press = key => { ctx.el.querySelector('output').textContent = calc.press(key); ctx.prefs.calculator = { ...calc }; ctx.save(); };
     ctx.el.querySelectorAll('button').forEach(button => button.onclick = () => press(button.dataset.key));
-    ctx.on(ctx.root, 'keydown', event => { const key = ({ Enter: '=', Escape: 'c', Backspace: '⌫', '*': '×', '/': '÷', '-': '−' })[event.key] || event.key; if (keys.includes(key) || key === '=') { event.preventDefault(); event.stopPropagation(); press(key); } });
+    ctx.on(ctx.root,'copy',event=>{if(!event.clipboardData)return;event.clipboardData.setData('text/plain',calc.display);event.preventDefault();});
+    ctx.on(ctx.root,'paste',event=>{const text=event.clipboardData?.getData('text/plain');if(text==null)return;event.preventDefault();if(calc.enter(text)){ctx.el.querySelector('output').textContent=calc.display;ctx.prefs.calculator={...calc};ctx.save();}else Dashboard.toast('Paste a number into Calculator.');});
+
+    ctx.on(ctx.root, 'keydown', event => { if (event.metaKey || event.ctrlKey || event.altKey) return; const key = ({ Enter: '=', Escape: 'c', Backspace: '⌫', '*': '×', '/': '÷', '-': '−' })[event.key] || event.key; if (keys.includes(key) || key === '=') { event.preventDefault(); event.stopPropagation(); press(key); } });
   }, () => '<p>Use the round keys or your keyboard. Memory, percentages, sign changes, and repeated equals work just like a pocket calculator.</p>');
 
   register('stickies', 'Stickies', 190, 176, noteIcon, ctx => {
@@ -76,19 +124,34 @@ const Widgets = (() => {
   }, prefs => `${select('color', 'Paper color', ['yellow', 'pink', 'blue', 'green', 'purple'], prefs.color)}${select('font', 'Font', ['Marker Felt', 'Helvetica'], prefs.font)}${select('size', 'Text size', ['14', '17', '20', '24'], prefs.size)}`, { text: '', color: 'yellow', font: 'Marker Felt', size: '17' });
 
   register('dictionary', 'Dictionary', 320, 37, box('D', 'wood'), ctx => {
-    ctx.el.innerHTML = '<div class="dictionary-face"><form class="dictionary-bar"><span class="dictionary-title">Dictionary</span><input aria-label="Look up a word" type="search" placeholder="Search" required></form><div class="dictionary-result" hidden></div></div>';
-    const form = ctx.el.querySelector('form'), output = ctx.el.querySelector('.dictionary-result');
-    form.onsubmit = async event => { event.preventDefault(); const word = form.querySelector('input').value.trim(); if (!word) return; output.hidden = false; output.textContent = 'Looking up…'; setDynamicHeight(ctx, 245); try { const result = await Dashboard.native('dictionary', { word }); if (ctx.alive()) output.textContent = result; } catch (error) { output.textContent = error.message; } };
-  }, () => '<p>Definitions come from dictionaries installed on this Mac. Works offline.</p>');
+    const p = ctx.prefs; let request = 0, debounce;
+    ctx.el.innerHTML = `<div class="dictionary-face"><form class="dictionary-bar"><select class="dictionary-source" aria-label="Dictionary or thesaurus"><option value="">Dictionary</option></select><input aria-label="Look up a word" type="search" placeholder="Search" value="${e(p.query || '')}" required></form><div class="dictionary-result" data-no-drag hidden></div></div>`;
+    const form = ctx.el.querySelector('form'), input = form.querySelector('input'), source = form.querySelector('select'), output = ctx.el.querySelector('.dictionary-result');
+    const fit = animated => { const liquid = Dashboard.state.settings.texture === 'liquid', expanded = !!p.query?.trim(); output.hidden = !expanded; grip.hidden = !expanded; ctx.resize(expanded ? p.resultSize?.width || (liquid?348:320) : liquid?348:320,expanded ? p.resultSize?.height || 245 : liquid?170:37,animated); };
+    const grip = resizeGrip(ctx,(width,height)=>{p.resultSize={width,height};ctx.save();},[260,170]);
+    const lookup = async () => {
+      clearTimeout(debounce); const id = ++request; p.query = input.value.trim(); p.source = source.value; ctx.save(); fit(true);
+      if (!p.query) { output.textContent = ''; p.result = ''; return; }
+      output.textContent = 'Looking up…';
+      try { const result = await Dashboard.native('dictionary',{word:p.query,source:p.source}); if (ctx.alive() && id === request) { p.result = result; output.textContent = result; ctx.save(); } } catch(error) { if (ctx.alive() && id === request) output.textContent = error.message; }
+    };
+    form.onsubmit = event => { event.preventDefault(); lookup(); };
+    input.oninput = () => { clearTimeout(debounce); if (!input.value.trim()) lookup(); else debounce = setTimeout(lookup,220); };
+    source.onchange = lookup;
+    ctx.cleanups.push(()=>clearTimeout(debounce));
+    Dashboard.native('dictionaries').then(sources=>{if(!ctx.alive())return;source.innerHTML=sources.map(item=>option(item.id,p.source||'',item.name)).join('');if(p.query&&!p.result)lookup();}).catch(()=>{});
+    output.textContent = p.result || ''; fit(false); ctx.onTheme(()=>fit(false));
+  }, () => '<p>Choose an installed dictionary or thesaurus. Type to look up a word; clear the search to collapse the result. Drag the lower-right corner to resize.</p>', { query:'',source:'' });
 
   register('converter', 'Unit Converter', 276, 193, box(svg('<path d="M6 11h52v42H6z" fill="#eee"/><path d="M8 22h48M8 44h48" stroke="#bba065" stroke-width="8"/><path d="M15 12v12m8-12v8m8-8v12m8-12v8m8-8v12" stroke="#888"/>'), 'metal'), ctx => {
     const p = ctx.prefs;
     const render = () => {
       const names = Object.keys(units[p.category]); if (!names.includes(p.from)) p.from = names[0]; if (!names.includes(p.to)) p.to = names[1];
-      ctx.el.innerHTML = `<div class="converter-face"><h2 class="widget-heading">Unit Converter</h2><select aria-label="Conversion category" class="classic-select converter-type">${Object.keys(units).map(category => option(category, p.category)).join('')}</select><div class="convert-row"><input aria-label="Value to convert" type="number" value="${e(p.value)}" step="any"><select aria-label="From unit" class="classic-select from">${names.map(name => option(name, p.from)).join('')}</select></div><div class="convert-row"><input aria-label="Converted value" class="result" readonly><select aria-label="To unit" class="classic-select to">${names.map(name => option(name, p.to)).join('')}</select></div></div>`;
-      const update = () => { const value = convert(Number(p.value), p.category, p.from, p.to); ctx.el.querySelector('.result').value = Number.isFinite(value) ? Number(value.toPrecision(10)) : ''; ctx.save(); };
+      ctx.el.innerHTML = `<div class="converter-face"><h2 class="widget-heading">Unit Converter</h2><select aria-label="Conversion category" class="classic-select converter-type">${Object.keys(units).map(category => option(category, p.category)).join('')}</select><div class="convert-row"><input aria-label="Value to convert" type="number" value="${e(p.value)}" step="any"><select aria-label="From unit" class="classic-select from">${names.map(name => option(name, p.from)).join('')}</select></div><div class="convert-row"><input aria-label="Converted value" class="result" type="number" step="any"><select aria-label="To unit" class="classic-select to">${names.map(name => option(name, p.to)).join('')}</select></div></div>`;
+      const update = () => { const value = convert(Number(p.value), p.category, p.from, p.to); ctx.el.querySelector('.result').value = String(p.value).trim() && Number.isFinite(value) ? Number(value.toPrecision(10)) : ''; ctx.save(); };
       ctx.el.querySelector('.converter-type').onchange = event => { p.category = event.target.value; render(); };
       ctx.el.querySelector('input[type=number]').oninput = event => { p.value = event.target.value; update(); };
+      ctx.el.querySelector('.result').oninput = event => { const value=convert(Number(event.target.value),p.category,p.to,p.from); p.value=event.target.value.trim() && Number.isFinite(value) ? String(Number(value.toPrecision(10))) : ''; ctx.el.querySelector('input[type=number]').value=p.value;ctx.save(); };
       for (const key of ['from', 'to']) ctx.el.querySelector('.' + key).onchange = event => { p[key] = event.target.value; update(); };
       update();
     }; render();
@@ -96,45 +159,66 @@ const Widgets = (() => {
 
   register('currency', 'Currency Converter', 276, 198, box('€', 'metal'), ctx => {
     const codes = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'KRW', 'SGD', 'NZD', 'MXN', 'BRL']; const p = ctx.prefs;
-    ctx.el.innerHTML = `<div class="converter-face"><h2 class="widget-heading">Currency Converter</h2><div class="convert-row"><input type="number" aria-label="Amount" value="${e(p.amount)}"><select aria-label="From currency" class="classic-select from">${codes.map(code => option(code, p.from)).join('')}</select></div><div class="convert-row"><input aria-label="Converted amount" class="result" readonly value="—"><select aria-label="To currency" class="classic-select to">${codes.map(code => option(code, p.to)).join('')}</select></div><div class="converter-footer">Updating exchange rate…</div></div>`;
+    ctx.el.innerHTML = `<div class="converter-face"><h2 class="widget-heading">Currency Converter</h2><div class="convert-row"><input type="number" aria-label="Amount" value="${e(p.amount)}"><select aria-label="From currency" class="classic-select from">${codes.map(code => option(code, p.from)).join('')}</select></div><div class="convert-row"><input aria-label="Converted amount" class="result" type="number" step="any" value=""><select aria-label="To currency" class="classic-select to">${codes.map(code => option(code, p.to)).join('')}</select></div><div class="converter-footer">Updating exchange rate…</div></div>`;
     let rate = null, request = 0;
-    const update = () => { ctx.el.querySelector('.result').value = rate !== null ? (Number(p.amount) * rate).toFixed(2) : ''; ctx.save(); };
+    const update = () => { ctx.el.querySelector('.result').value = rate !== null && String(p.amount).trim() ? (Number(p.amount) * rate).toFixed(2) : ''; ctx.save(); };
     const load = async () => { const id = ++request; try { const data = p.from === p.to ? { rates: { [p.to]: 1 }, date: new Date().toISOString().slice(0, 10) } : await fetchJSON(`https://api.frankfurter.dev/v1/latest?base=${p.from}&symbols=${p.to}`); if (!ctx.alive() || id !== request) return; rate = data.rates[p.to]; ctx.el.querySelector('.converter-footer').textContent = `ECB reference rate · ${data.date}`; update(); } catch (error) { if (ctx.alive() && id === request) { rate = null; update(); ctx.el.querySelector('.converter-footer').textContent = error.message; } } };
     ctx.el.querySelector('input[type=number]').oninput = event => { p.amount = event.target.value; update(); };
-    ['from', 'to'].forEach(key => ctx.el.querySelector('.' + key).onchange = event => { p[key] = event.target.value; rate = null; load(); }); load();
+    ctx.el.querySelector('.result').oninput = event => { if (!Number.isFinite(rate) || rate <= 0) return; p.amount = event.target.value.trim() ? String(Number((Number(event.target.value)/rate).toPrecision(10))) : ''; ctx.el.querySelector('input[type=number]').value = p.amount; ctx.save(); };
+    ['from', 'to'].forEach(key => ctx.el.querySelector('.' + key).onchange = event => { p[key] = event.target.value; rate = null; update(); load(); }); load();
   }, () => '<p>Daily ECB reference rates via Frankfurter. Rates are indicative and are not live trading prices.</p>', { from: 'EUR', to: 'USD', amount: '1' });
 
   register('stocks', 'Stocks', 215, 306, box(svg('<path d="M4 50l10-4 4 5 6-20 6 8 8-19 6 7 5-18 10 5" stroke="white" stroke-width="2"/><path d="M5 16v41h55" stroke="#a0bade"/>')), ctx => {
-    let selected = 0, quotes = [], request = 0;
+    const p = ctx.prefs; let selected = Math.max(0, Number(p.selected) || 0), quotes = [], request = 0;
     const ranges = { '1d': ['1d', '5m'], '1w': ['5d', '30m'], '1m': ['1mo', '1d'], '3m': ['3mo', '1d'], '6m': ['6mo', '1d'], '1y': ['1y', '1wk'] };
-    ctx.prefs.range ||= '1m';
-    const render = () => {
+    if (!ranges[p.range]) p.range = '1m';
+    const fit = animated => {
+      const liquid = Dashboard.state.settings.texture === 'liquid', expanded = p.expanded !== false;
+      ctx.root.classList.toggle('stocks-collapsed', !expanded);
+      const detail = ctx.el.querySelector('.stock-detail'); if (detail) detail.inert = !expanded;
+      ctx.resize(liquid ? 348 : 215, Math.max(liquid ? 170 : 65, quotes.length * (liquid ? 37 : 29) + (expanded ? (liquid ? 175 : 161) : (liquid ? 42 : 22))), animated);
+    };
+    const render = (animated = false) => {
+      selected = Core.clamp(selected, 0, Math.max(0, quotes.length - 1));
       const quote = quotes[selected]; const values = quote?.history || [];
       const min = Math.min(...values), max = Math.max(...values); const points = values.map((value, index) => `${index / Math.max(values.length - 1, 1) * 190},${74 - (value - min) / Math.max(max - min, 0.01) * 66}`).join(' ');
-      ctx.el.innerHTML = `<div class="stocks-face"><div class="stock-rows">${quotes.map((q, index) => `<button class="stock-row ${index === selected ? 'selected' : ''}" data-index="${index}"><strong>${e(q.symbol)}</strong><span>${q.price == null ? '—' : q.price.toFixed(2)}</span><span class="stock-change ${q.change < 0 ? 'negative' : ''}">${q.change == null ? '—' : `${q.change >= 0 ? '+' : ''}${q.change.toFixed(2)}%`}</span></button>`).join('')}</div><div class="stock-range">${Object.keys(ranges).map(range => `<button data-range="${range}" class="${ctx.prefs.range === range ? 'selected' : ''}">${range}</button>`).join('')}</div><svg class="stock-chart" viewBox="0 0 190 80" preserveAspectRatio="none">${[10, 30, 50, 70].map(y => `<path d="M0 ${y}H190" stroke="#a3c3eb33"/>`).join('')}${values.length ? `<polyline points="${points}" fill="none" stroke="#fff" stroke-width="1.6"/>` : ''}</svg><div class="stock-status">${e(quote?.error || (quote?.time ? `Delayed · ${new Date(quote.time * 1000).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : 'Updating quotes…'))}</div></div>`;
-      ctx.el.querySelectorAll('[data-index]').forEach(button => button.onclick = () => { selected = Number(button.dataset.index); render(); });
-      ctx.el.querySelectorAll('[data-range]').forEach(button => button.onclick = () => { ctx.prefs.range = button.dataset.range; ctx.save(); load(); });
+      ctx.el.innerHTML = `<div class="stocks-face"><div class="stock-rows">${quotes.map((q, index) => { const change = p.changeMode === 'Points' ? q.difference : q.change; return `<div class="stock-row ${index === selected ? 'selected' : ''}"><button class="stock-select" data-index="${index}" aria-expanded="${index === selected && p.expanded !== false}" aria-label="${e(q.symbol)} chart"><strong>${e(q.symbol)}</strong><span>${q.price == null ? '—' : q.price.toFixed(2)}</span></button><button class="stock-change ${change < 0 ? 'negative' : ''}" aria-label="Show change in ${p.changeMode === 'Points' ? 'percent' : 'points'}">${change == null ? '—' : `${change >= 0 ? '+' : ''}${change.toFixed(2)}${p.changeMode === 'Points' ? '' : '%'}`}</button></div>`; }).join('')}</div><div class="stock-detail"><div class="stock-range">${Object.keys(ranges).map(range => `<button data-range="${range}" class="${p.range === range ? 'selected' : ''}" aria-pressed="${p.range === range}">${range}</button>`).join('')}</div><svg class="stock-chart" viewBox="0 0 190 80" preserveAspectRatio="none" role="img" aria-label="${e(quote?.symbol || 'Stock')} price chart">${[10, 30, 50, 70].map(y => `<path d="M0 ${y}H190" stroke="#a3c3eb33"/>`).join('')}${values.length ? `<polyline points="${points}" fill="none" stroke="#fff" stroke-width="1.6"/>` : ''}</svg><div class="stock-status">${e(quote?.error || (quote?.time ? `Delayed · ${new Date(quote.time * 1000).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : 'Updating quotes…'))}</div></div></div>`;
+      ctx.el.querySelectorAll('[data-index]').forEach(button => button.onclick = () => { const index = Number(button.dataset.index); p.expanded = index === selected ? p.expanded === false : true; p.selected = selected = index; render(true); ctx.el.querySelector(`[data-index="${index}"]`).focus({preventScroll:true}); });
+      ctx.el.querySelectorAll('.stock-change').forEach((button,index) => button.onclick = () => { p.changeMode = p.changeMode === 'Points' ? 'Percent' : 'Points'; render(); ctx.save(); ctx.el.querySelectorAll('.stock-change')[index].focus({preventScroll:true}); });
+      ctx.el.querySelectorAll('[data-range]').forEach(button => button.onclick = () => { p.range = button.dataset.range; ctx.save(); load(); });
+      fit(animated);
     };
     const load = async () => {
       const id = ++request;
       quotes = (ctx.prefs.symbols || 'AAPL,MSFT,GOOG,AMZN,NVDA').split(',').map(s => s.trim().toUpperCase()).filter(s => /^[A-Z0-9.^=-]{1,15}$/.test(s)).slice(0, 6).map(symbol => ({ symbol })); render();
-      await Promise.allSettled(quotes.map(async (quote, index) => { try { const data = await fetchJSON(`https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(quote.symbol)}?interval=${ranges[ctx.prefs.range][1]}&range=${ranges[ctx.prefs.range][0]}`); const result = data.chart?.result?.[0]; if (!result) throw new Error('Quote unavailable'); const price = result.meta.regularMarketPrice; const history = result.indicators.quote[0].close.filter(Number.isFinite); let previous = result.meta.previousClose || result.meta.regularMarketPreviousClose; if (!previous) { try { const daily = await fetchJSON(`https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(quote.symbol)}?interval=5m&range=1d`); previous = daily.chart?.result?.[0]?.meta?.previousClose || daily.chart?.result?.[0]?.meta?.chartPreviousClose; } catch {} } if (id === request) quotes[index] = { symbol: quote.symbol, price, change: Number.isFinite(previous) && previous > 0 ? (price - previous) / previous * 100 : null, history, time: result.meta.regularMarketTime }; } catch { if (id === request) quotes[index] = { symbol: quote.symbol, error: 'Quote source unavailable. Try refreshing later.' }; } }));
+      await Promise.allSettled(quotes.map(async (quote, index) => { try { const data = await fetchJSON(`https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(quote.symbol)}?interval=${ranges[ctx.prefs.range][1]}&range=${ranges[ctx.prefs.range][0]}`); const result = data.chart?.result?.[0]; if (!result) throw new Error('Quote unavailable'); const price = result.meta.regularMarketPrice; const history = result.indicators.quote[0].close.filter(Number.isFinite); let previous = result.meta.previousClose || result.meta.regularMarketPreviousClose; if (!previous) { try { const daily = await fetchJSON(`https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(quote.symbol)}?interval=5m&range=1d`); previous = daily.chart?.result?.[0]?.meta?.previousClose || daily.chart?.result?.[0]?.meta?.chartPreviousClose; } catch {} } if (id === request) quotes[index] = { symbol: quote.symbol, price, difference: Number.isFinite(previous) ? price - previous : null, change: Number.isFinite(previous) && previous > 0 ? (price - previous) / previous * 100 : null, history, time: result.meta.regularMarketTime }; } catch { if (id === request) quotes[index] = { symbol: quote.symbol, error: 'Quote source unavailable. Try refreshing later.' }; } }));
       if (ctx.alive() && request === id) render();
-    }; load(); ctx.interval(load, 300000);
-  }, prefs => `${input('symbols', 'Stock symbols, separated by commas', prefs.symbols)}<p>Delayed Yahoo Finance quotes and one-month charts. Availability depends on the data provider. Click a row to view its chart.</p>`, { symbols: 'AAPL,MSFT,GOOG,AMZN,NVDA', range: '1m' });
+    }; load(); ctx.onTheme(() => fit(false)); ctx.interval(load, 300000);
+  }, prefs => `${input('symbols', 'Stock symbols, separated by commas', prefs.symbols)}${select('changeMode','Price change',['Percent','Points'],prefs.changeMode)}<p>Click the selected stock to slide its chart in or out. Click the change badge to switch between points and percent. Quotes are delayed and depend on Yahoo Finance.</p>`, { symbols: 'AAPL,MSFT,GOOG,AMZN,NVDA', range: '1m', expanded: true, selected: 0, changeMode: 'Percent' });
 
   register('translation', 'Translation', 287, 251, box(globe), ctx => {
     const languages = ['English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese', 'Japanese', 'Chinese', 'Korean', 'Hindi', 'Arabic']; const p = ctx.prefs;
     ctx.el.innerHTML = `<div class="blue-face"><div class="translation-controls"><span>Translate from</span><select class="classic-select from" aria-label="Source language">${languages.map(l => option(l, p.from)).join('')}</select></div><textarea class="translation-area" aria-label="Text to translate" placeholder="Enter text…">${e(p.text)}</textarea><div class="translation-middle"><button class="silver-button swap" title="Swap languages" aria-label="Swap languages">${Icons.symbol('swap')}</button><div class="translation-controls"><span>To</span><select class="classic-select to" aria-label="Target language">${languages.map(l => option(l, p.to)).join('')}</select></div><button class="silver-button translate" aria-label="Translate">${Icons.symbol('arrow')}</button></div><div class="translation-area translation-output" aria-live="polite">${e(p.result || '')}</div><div class="translate-status">Uses your selected AI provider.</div></div>`;
-    ctx.el.querySelector('textarea').oninput = event => { p.text = event.target.value; ctx.save(); };
-    ['from', 'to'].forEach(key => ctx.el.querySelector('.' + key).onchange = event => { p[key] = event.target.value; ctx.save(); });
-    ctx.el.querySelector('.swap').onclick = () => { [p.from, p.to] = [p.to, p.from]; ctx.el.querySelector('.from').value = p.from; ctx.el.querySelector('.to').value = p.to; ctx.save(); };
-    ctx.el.querySelector('.translate').onclick = async () => { if (!p.text.trim()) return; const button = ctx.el.querySelector('.translate'), status = ctx.el.querySelector('.translate-status'); button.disabled = true; status.textContent = 'Translating…'; try { const result = await Dashboard.native('translate', { ...Dashboard.aiSettings(), prompt: `Translate this text from ${p.from} to ${p.to}:\n${p.text}` }); if (!ctx.alive()) return; p.result = result; ctx.el.querySelector('.translation-output').textContent = result; status.textContent = 'Translation complete'; ctx.save(); } catch (error) { if (ctx.alive()) status.textContent = error.message; } finally { button.disabled = false; } };
+    let revision = 0;
+    const edited = () => { revision++; ctx.save(); };
+    ctx.el.querySelector('textarea').oninput = event => { p.text = event.target.value; edited(); };
+    ['from', 'to'].forEach(key => ctx.el.querySelector('.' + key).onchange = event => { p[key] = event.target.value; edited(); });
+    ctx.el.querySelector('.swap').onclick = () => { [p.from, p.to] = [p.to, p.from]; [p.text,p.result] = [p.result || '',p.text]; ctx.el.querySelector('.from').value = p.from; ctx.el.querySelector('.to').value = p.to; ctx.el.querySelector('textarea').value = p.text; ctx.el.querySelector('.translation-output').textContent = p.result; edited(); };
+    ctx.el.querySelector('.translate').onclick = async () => { if (!p.text.trim()) return; const id = revision, button = ctx.el.querySelector('.translate'), status = ctx.el.querySelector('.translate-status'); button.disabled = true; status.textContent = 'Translating…'; try { const result = await Dashboard.native('translate', { ...Dashboard.aiSettings(), prompt: `Translate this text from ${p.from} to ${p.to}:\n${p.text}` }); if (!ctx.alive() || id !== revision) return; p.result = result; ctx.el.querySelector('.translation-output').textContent = result; status.textContent = 'Translation complete'; ctx.save(); } catch (error) { if (ctx.alive() && id === revision) status.textContent = error.message; } finally { button.disabled = false; if (ctx.alive() && id !== revision) status.textContent = 'Text changed. Translate again to update.'; } };
+    ctx.el.querySelector('textarea').onkeydown = event => { if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); ctx.el.querySelector('.translate').click(); } };
   }, () => '<p>Translations use the provider selected in Dashboard Settings. LM Studio keeps the request on this Mac; Claude Code and Codex use their configured service.</p>', { from: 'English', to: 'Japanese', text: '', result: '' });
 
   register('contacts', 'Address Book', 256, 79, box('@', 'metal'), ctx => {
     ctx.el.innerHTML = `<div class="address-face"><div class="address-search"><div class="address-avatar">${svg('<circle cx="32" cy="22" r="13" fill="#ddd"/><path d="M8 59V45q24-20 48 0v14" fill="#ddd"/>')}</div><form class="address-fields"><input type="search" aria-label="Search contacts" placeholder="Name" required><strong>Address Book Search</strong></form></div><div class="contact-results" hidden></div></div>`;
-    ctx.el.querySelector('form').onsubmit = async event => { event.preventDefault(); const query = ctx.el.querySelector('input').value.trim(); if (!query) return; const results = ctx.el.querySelector('.contact-results'); results.hidden = false; results.textContent = 'Searching…'; setDynamicHeight(ctx, 267); try { const contacts = await Dashboard.native('contacts', { query }); if (ctx.alive()) results.innerHTML = contacts.length ? contacts.map(c => `<div class="contact-result"><strong>${e(c.name)}</strong><p>${e(c.email)}</p><p>${e(c.phone)}</p></div>`).join('') : 'No matching contacts.'; } catch (error) { results.textContent = error.message; } };
+    const results = ctx.el.querySelector('.contact-results'), search = ctx.el.querySelector('input'); let request = 0;
+    const fit = () => { const liquid = Dashboard.state.settings.texture === 'liquid'; ctx.resize(liquid ? 348 : 256, results.hidden ? (liquid ? 170 : 79) : (liquid ? 348 : 267), true); };
+    const showContacts = contacts => {
+      results.innerHTML = contacts.length ? contacts.map((c,index) => `<button class="contact-choice" data-contact="${index}">${e(c.name)}</button>`).join('') : 'No matching contacts.';
+      results.querySelectorAll('[data-contact]').forEach(button => button.onclick = () => { const contact = contacts[Number(button.dataset.contact)]; results.innerHTML = `<button class="silver-button contact-back">All Results</button><div class="contact-result" data-no-drag><strong>${e(contact.name)}</strong><p>${e(contact.email)}</p><p>${e(contact.phone)}</p></div>`; results.querySelector('.contact-back').onclick = () => showContacts(contacts); results.querySelector('.contact-back').focus({preventScroll:true}); });
+    };
+    search.oninput = () => { request++; if (!search.value.trim()) { results.hidden = true; results.textContent = ''; fit(); } };
+    ctx.el.querySelector('form').onsubmit = async event => { event.preventDefault(); const query = search.value.trim(); if (!query) return; const id = ++request; results.hidden = false; results.textContent = 'Searching…'; fit(); try { const contacts = await Dashboard.native('contacts', { query }); if (ctx.alive() && id === request) showContacts(contacts); } catch (error) { if (ctx.alive() && id === request) results.textContent = error.message; } };
+    ctx.onTheme(fit);
   }, () => '<p>Searches Contacts on this Mac. Access is requested only when you submit a name. Contact details stay on this Mac.</p>');
 
   register('tilegame', 'Tile Game', 158, 180, box(svg('<path d="M5 5h54v54H5z" fill="#b6dc67"/><path d="M5 5h18v18H5zM23 23h18v18H23zM41 41h18v18H41z" fill="#689e31"/><path d="M23 5v54M41 5v54M5 23h54M5 41h54" stroke="#365121"/>')), ctx => {
@@ -146,11 +230,30 @@ const Widgets = (() => {
   }, prefs => `${select('picture', 'Puzzle', ['Photo', 'Numbers'], prefs.picture)}<p>Reassemble the picture or arrange 1 to 15. Click a tile beside the empty square.</p><button class="silver-button shuffle-tiles">New Game</button><p>Photo: NPS / Diane Renkin (public domain).</p>`, { moves: 0, picture: 'Photo' });
 
   register('music', 'iTunes', 168, 234, box('♫', 'metal'), ctx => {
-    ctx.el.innerHTML = `<div class="music-face"><div class="music-artwork modern-only">${Icons.symbol('music')}</div><div class="music-screen"><strong><span class="classic-only">iTunes</span><span class="modern-only">Music</span></strong><span class="classic-only">Click the center button<br>to connect to Music</span><span class="modern-only">Control what’s playing<br>on this Mac.</span></div><div class="music-wheel"><button class="menu" data-command="status">MENU</button><button class="prev" aria-label="Previous track" data-command="previous">${Icons.symbol('previous')}</button><button class="next" aria-label="Next track" data-command="next">${Icons.symbol('next')}</button><button class="play" aria-label="Play or pause" data-command="playpause">${Icons.symbol('play')}</button><button class="center" aria-label="Connect to Music" data-command="status"><span class="modern-only">Connect Music</span></button></div></div>`;
-    let connected = false;
-    const command = async command => { try { const result = await Dashboard.native('music', { command }); if (!ctx.alive()) return; connected = true; ctx.el.querySelector('.music-face').classList.add('connected'); ctx.el.querySelector('.music-screen').innerHTML = `<strong>${e(result.title)}</strong><span>${e(result.artist)}<br>${e(result.state)}</span>`; } catch (error) { connected = false; if (ctx.alive()) ctx.el.querySelector('.music-screen').innerHTML = `<span>${e(error.message)}</span>`; } };
-    ctx.el.querySelectorAll('[data-command]').forEach(button => button.onclick = () => command(button.dataset.command)); ctx.interval(() => { if (connected) command('status'); }, 10000);
-  }, () => '<p>Control playback in the Music app. Connect from the front of the widget. macOS may ask for Automation access.</p>');
+    ctx.el.innerHTML = `<div class="music-face"><button class="music-artwork modern-only" data-command="menu" aria-label="Music playlists">${Icons.symbol('music')}</button><div class="music-screen"><strong><span class="classic-only">iTunes</span><span class="modern-only">Music</span></strong><span class="classic-only">Click the center button<br>to connect to Music</span><span class="modern-only">Control what’s playing<br>on this Mac.</span></div><div class="music-wheel"><button class="menu" data-command="menu" aria-label="Music playlists">MENU</button><button class="prev" aria-label="Previous track" data-command="previous">${Icons.symbol('previous')}</button><button class="next" aria-label="Next track" data-command="next">${Icons.symbol('next')}</button><button class="play" aria-label="Play or pause" data-command="playpause">${Icons.symbol('play')}</button><button class="center" aria-label="Connect to Music" data-command="status"><span class="modern-only">Connect Music</span></button></div></div>`;
+    let connected = false, libraryOpen = false;
+    const library = document.createElement('div'); library.className='music-library'; library.hidden=true; ctx.el.querySelector('.music-face').append(library);
+    const closeLibrary = () => { libraryOpen=false; library.hidden=true; };
+    const command = async (command, data = {}) => {
+      if (command === 'menu') {
+        if (libraryOpen) { closeLibrary(); return; }
+        libraryOpen=true; library.hidden=false; library.innerHTML='<button class="silver-button library-back">Now Playing</button><div class="music-playlists">Loading playlists…</div>';
+        library.querySelector('.library-back').onclick=closeLibrary;
+        try { const playlists=await Dashboard.native('musicPlaylists'); if (!ctx.alive() || !libraryOpen) return;
+          const list=library.querySelector('.music-playlists'); list.innerHTML=playlists.length?playlists.map(item=>`<button data-playlist="${e(item.id)}">${e(item.name)}</button>`).join(''):'No playlists in Music.';
+          list.querySelectorAll('[data-playlist]').forEach(button=>button.onclick=()=>{closeLibrary(); play('playlist',{playlist:button.dataset.playlist});});
+        } catch(error) { if(ctx.alive() && libraryOpen) library.querySelector('.music-playlists').textContent=error.message; }
+        return;
+      }
+      await play(command,data);
+    };
+    const play = async (command,data={}) => { try { const result = await Dashboard.native('music', { command,...data }); if (!ctx.alive()) return; connected = true; ctx.el.querySelector('.music-face').classList.add('connected');
+      ctx.el.querySelector('.music-screen').innerHTML = `<strong>${e(result.title)}</strong><span>${e(result.artist || result.state)}</span><input class="music-volume" type="range" min="0" max="100" value="${Core.clamp(Number(result.volume)||0,0,100)}" aria-label="Music volume">`;
+      ctx.el.querySelector('.music-volume').onchange=event=>play('volume',{volume:Number(event.target.value)});
+      const button=ctx.el.querySelector('.play'); button.innerHTML=Icons.symbol(result.state==='playing'?'pause':'play'); button.setAttribute('aria-label',result.state==='playing'?'Pause':'Play');
+    } catch (error) { connected = false; if (ctx.alive()) ctx.el.querySelector('.music-screen').innerHTML = `<span>${e(error.message)}</span>`; } };
+    ctx.el.querySelectorAll('[data-command]').forEach(button => button.onclick = () => command(button.dataset.command)); ctx.interval(() => { if (connected && !libraryOpen && !ctx.el.contains(document.activeElement)) command('status'); }, 10000);
+  }, () => '<p>Connect to Music, adjust volume, or choose a playlist from MENU (the music icon in the modern theme). macOS may ask for Automation access.</p>');
 
   function searchWidget(id, name, icon, title, className, url, caption) {
     register(id, name, 278, 116, icon, ctx => {
@@ -188,9 +291,28 @@ const Widgets = (() => {
 
   register('webclip', 'Web Clip', 340, 255, box(svg('<rect x="5" y="7" width="54" height="49" rx="3" fill="#eee"/><path d="M5 18h54" stroke="#aaa"/><path d="M13 26h36M13 34h25M13 42h32" stroke="#aaa" stroke-width="3"/>'), 'metal'), ctx => {
     const p = ctx.prefs; let url = null; try { const parsed = new URL(p.url); if (parsed.protocol === 'https:') url = parsed.href; } catch {}
-    ctx.el.innerHTML = `<div class="webclip-face"><div class="clip">${url ? `<iframe sandbox="allow-scripts" referrerpolicy="no-referrer" src="${e(url)}" title="Web Clip"></iframe>` : '<div class="clip-placeholder">Click ⓘ to choose a website.<br>Some sites prevent embedding; use Open to visit them.</div>'}</div><div class="webclip-title"><span>${e(p.title || 'Web Clip')}</span><button class="silver-button">Open</button></div></div>`;
-    ctx.el.querySelector('button').onclick = () => url ? Dashboard.open(url) : ctx.flip();
-  }, prefs => `${input('title', 'Title', prefs.title)}${input('url', 'Website (https://)', prefs.url)}<p>Some websites block embedded views. Open always visits the page in your browser.</p>`, { title: 'Web Clip', url: '' });
+    ctx.el.innerHTML = `<div class="webclip-face"><div class="clip">${url ? `<iframe sandbox="allow-scripts" referrerpolicy="no-referrer" src="${e(url)}" title="Web Clip"></iframe><button class="clip-pan" hidden aria-label="Drag to position the clipped page. Arrow keys move the page."><span>Drag to position</span></button>` : '<div class="clip-placeholder">Click ⓘ to choose a website.<br>Some sites prevent embedding; use Open to visit them.</div>'}</div><div class="webclip-title"><span>${e(p.title || 'Web Clip')}</span>${url ? '<button class="silver-button clip-adjust" aria-pressed="false">Adjust</button>' : ''}<button class="silver-button clip-open">Open</button></div></div>`;
+    ctx.el.querySelector('.clip-open').onclick = () => url ? Dashboard.open(url) : ctx.flip();
+    const frame = ctx.el.querySelector('iframe'), pan = ctx.el.querySelector('.clip-pan');
+    const position = () => {
+      if (!frame) return;
+      const clip = ctx.el.querySelector('.clip'), zoom = Core.clamp(Number(p.zoom) || 1,.5,2);
+      const width = Math.max(clip.clientWidth / zoom,Core.clamp(Number(p.pageWidth) || 1024,240,4096)), height = Math.max(clip.clientHeight / zoom,900);
+      p.offsetX = Core.clamp(Number(p.offsetX) || 0,0,Math.max(0,width*zoom-clip.clientWidth)); p.offsetY = Core.clamp(Number(p.offsetY) || 0,0,Math.max(0,height*zoom-clip.clientHeight));
+      frame.style.width = width+'px'; frame.style.height = height+'px'; frame.style.transformOrigin = 'top left'; frame.style.transform = `translate(${-p.offsetX}px,${-p.offsetY}px) scale(${zoom})`;
+    };
+    const fit = () => { const liquid = Dashboard.state.settings.texture === 'liquid'; ctx.resize(p.size?.width || (liquid?348:340),p.size?.height || (liquid?360:255)); position(); };
+    resizeGrip(ctx,(width,height)=>{ p.size={width,height}; requestAnimationFrame(position); },[240,170]);
+    if (pan) {
+      const adjust = ctx.el.querySelector('.clip-adjust'); adjust.onclick = () => { pan.hidden = !pan.hidden; adjust.textContent = pan.hidden ? 'Adjust' : 'Done'; adjust.setAttribute('aria-pressed',!pan.hidden); if (!pan.hidden) pan.focus({preventScroll:true}); ctx.save(); };
+      pan.onpointerdown = event => { event.preventDefault(); event.stopPropagation(); pan.setPointerCapture(event.pointerId); const start={x:event.clientX,y:event.clientY,offsetX:p.offsetX,offsetY:p.offsetY};
+        pan.onpointermove = event => { p.offsetX=start.offsetX-(event.clientX-start.x)/Dashboard.state.settings.scale; p.offsetY=start.offsetY-(event.clientY-start.y)/Dashboard.state.settings.scale; position(); };
+        pan.onpointerup = pan.onpointercancel = () => { pan.onpointermove=null; ctx.save(); };
+      };
+      pan.onkeydown = event => { if (event.key.startsWith('Arrow')) { event.preventDefault(); event.stopPropagation(); p.offsetX+=(event.key==='ArrowRight'?20:event.key==='ArrowLeft'?-20:0); p.offsetY+=(event.key==='ArrowDown'?20:event.key==='ArrowUp'?-20:0); position(); ctx.save(); } };
+    }
+    fit(); ctx.onTheme(fit);
+  }, prefs => `${input('title', 'Title', prefs.title)}${input('url', 'Website (https://)', prefs.url)}${input('pageWidth','Page width',prefs.pageWidth || 1024,'number')}${select('zoom','Page scale',['0.5','0.75','1','1.25','1.5','2'],String(prefs.zoom || 1))}<p>Resize from the lower-right corner. Adjust positions the page inside the clip. Some websites block embedding; Open visits the page in your browser.</p>`, { title: 'Web Clip', url: '', pageWidth:1024,zoom:'1',offsetX:0,offsetY:0 });
 
   return { definitions, locationSettings, fetchJSON, option, input, select, svg, box };
 })();

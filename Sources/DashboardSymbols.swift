@@ -14,7 +14,7 @@ import AppKit
             "music": "music.note", "google": "magnifyingglass", "business": "building.2",
             "people": "person.2", "flight": "airplane", "sports": "sportscourt",
             "ski": "snowflake", "movies": "film", "webclip": "globe",
-            "play": "play.fill", "previous": "backward.end.fill", "next": "forward.end.fill"
+            "play": "play.fill", "pause": "pause.fill", "previous": "backward.end.fill", "next": "forward.end.fill"
         ]
         var result: [String: String] = [:]
         let configuration = NSImage.SymbolConfiguration(pointSize: 18, weight: .regular)
