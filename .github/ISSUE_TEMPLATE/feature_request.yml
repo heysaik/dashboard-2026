@@ -1,0 +1,20 @@
+name: Feature request
+description: Suggest an improvement or widget.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would this help you do?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: For connected widgets, suggest a documented public data source if available. Never include credentials.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and relevant references

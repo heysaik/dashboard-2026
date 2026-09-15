@@ -1,0 +1,53 @@
+name: Bug report
+description: Report a reproducible problem with Dashboard.
+body:
+  - type: markdown
+    attributes:
+      value: Please use synthetic data and redact personal information from screenshots or logs. Security issues belong in private vulnerability reporting.
+  - type: input
+    id: version
+    attributes:
+      label: Dashboard version or commit
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: macOS version/build and Mac architecture
+      placeholder: macOS 26.6.1, Apple Silicon
+    validations:
+      required: true
+  - type: dropdown
+    id: theme
+    attributes:
+      label: Theme
+      options:
+        - Leopard
+        - Liquid Glass
+        - Both
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Presentation
+      options:
+        - Space
+        - Overlay
+        - Both
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include the widget, size, and provider/CLI version if relevant. Do not include API keys or personal inputs.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized screenshots or logs

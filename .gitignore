@@ -11,3 +11,24 @@ Research/*.c
 Research/*.h
 Research/*.m
 Research/spaces-research.md
+
+# Credentials, signing material, and local state must never be published.
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.p8
+*.key
+*.mobileprovision
+*.provisionprofile
+*.keychain
+*.keychain-db
+*.xcarchive/
+*.dSYM/
+*.bundle
+dashboard.json
+dashboard.backup.json
+Widget Backups/
+.codex/
+.claude/
