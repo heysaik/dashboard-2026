@@ -50,3 +50,8 @@ jobs:
         run: ./scripts/test.sh
       - name: Verify universal binary
         run: lipo 'build/Build/Products/Release/Dashboard 2026.app/Contents/MacOS/Dashboard 2026' -verify_arch arm64 x86_64
+      - name: Package and verify download checksum
+        run: |
+          DEVELOPER_ID_APPLICATION='' NOTARY_PROFILE='' ./scripts/package.sh
+          cd dist
+          shasum -a 256 -c Dashboard.zip.sha256

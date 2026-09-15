@@ -23,5 +23,5 @@ if [[ -n "${NOTARY_PROFILE:-}" ]]; then
   xcrun stapler staple "$package_stage/Dashboard.app"
   ditto -c -k --sequesterRsrc --keepParent "$package_stage/Dashboard.app" 'dist/Dashboard.zip'
 fi
-(cd dist && shasum -a 256 'Dashboard.zip' > 'dist/Dashboard.zip.sha256')
+(cd dist && shasum -a 256 'Dashboard.zip' > 'Dashboard.zip.sha256')
 print 'Packaged dist/Dashboard.zip'
