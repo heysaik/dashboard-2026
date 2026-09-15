@@ -63,3 +63,9 @@ The activity widget was visually inspected at Small, Medium and Large. Its human
 After installation, the exact GitHub prompt was run through the installed app's Create a Widget dialog with Automatic sizing. It passed the real source, all three layouts and the functionality review on the first attempt, selected Medium, and visibly rendered 1,387 commits across 31 daily squares. The result was left in the preview without adding a widget. All four existing widget IDs and both custom-definition IDs were preserved.
 
 The loop is bounded to six attempts and does not start further attempts after twelve minutes. Passing these checks is evidence for the tested data/layout/control paths, not a guarantee of every possible widget behavior or remote service. Unsupported requests, missing credentials and exhausted repairs are reported explicitly; they are not presented as a ready widget.
+
+## Public release preparation — September 15, 2026
+
+A clean source export passed 20 Node tests, 86 existing WebKit checks, eight creator checks, and 19 native validations. Three new native checks cover resource loading through a symlinked app path and rejection of traversal or symlink escapes outside the resource directory. The clean `/tmp` build exposed a path-normalization failure that was fixed before release.
+
+The contribution workflow was checked with actionlint. Builds explicitly include both arm64 and x86_64. Packaging now uses fresh staging, includes the license and asset notices, verifies the app signature, and writes a checksum that can be checked beside the downloaded ZIP. No live AI account was used for these release checks. Compatibility and signing limits above still apply.

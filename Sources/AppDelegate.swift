@@ -254,11 +254,15 @@ final class DashboardWindow: NSWindow {
 }
 
 final class ResourceHandler: NSObject, WKURLSchemeHandler {
+    static func resourceURL(root: URL, path: String) -> URL? {
+        let directory = root.standardizedFileURL.resolvingSymlinksInPath()
+        let file = directory.appendingPathComponent(path).standardizedFileURL.resolvingSymlinksInPath()
+        return file.path.hasPrefix(directory.path + "/") ? file : nil
+    }
     func webView(_ webView: WKWebView, start task: WKURLSchemeTask) {
         guard let url = task.request.url, url.host == "app", let root = Bundle.main.resourceURL?.appendingPathComponent("Web") else { task.didFailWithError(URLError(.badURL)); return }
         let path = url.path == "/" ? "index.html" : String(url.path.dropFirst())
-        let file = root.appendingPathComponent(path).standardizedFileURL
-        guard file.path.hasPrefix(root.path + "/"), let data = try? Data(contentsOf: file) else { task.didFailWithError(URLError(.fileDoesNotExist)); return }
+        guard let file = Self.resourceURL(root: root, path: path), let data = try? Data(contentsOf: file) else { task.didFailWithError(URLError(.fileDoesNotExist)); return }
         let mime = ["html": "text/html", "js": "application/javascript", "css": "text/css", "svg": "image/svg+xml", "png": "image/png"][file.pathExtension] ?? "application/octet-stream"
         task.didReceive(URLResponse(url: url, mimeType: mime, expectedContentLength: data.count, textEncodingName: "utf-8")); task.didReceive(data); task.didFinish()
     }

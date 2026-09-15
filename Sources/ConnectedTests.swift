@@ -7,6 +7,16 @@ extension AppDelegate {
             report[name] = passed
             if !passed { throw DashboardError.message(name) }
         }
+        let assets = bridge.store.directory.appendingPathComponent("resource-fixture")
+        let assetLink = bridge.store.directory.appendingPathComponent("resource-alias")
+        try FileManager.default.createDirectory(at: assets, withIntermediateDirectories: true)
+        try Data("fixture".utf8).write(to: assets.appendingPathComponent("index.html"))
+        try FileManager.default.createSymbolicLink(at: assetLink, withDestinationURL: assets)
+        try FileManager.default.createSymbolicLink(at: assets.appendingPathComponent("outside"), withDestinationURL: bridge.store.directory)
+        let resolved = ResourceHandler.resourceURL(root: assetLink, path: "index.html")
+        try check("bundled resources load through a symlinked app path", resolved.flatMap { try? String(contentsOf: $0, encoding: .utf8) } == "fixture")
+        try check("resource traversal outside the bundle is rejected", ResourceHandler.resourceURL(root: assets, path: "../smoke-result.json") == nil)
+        try check("resource symlinks cannot escape the bundle", ResourceHandler.resourceURL(root: assets, path: "outside/dashboard.json") == nil)
         for address in ["https://127.0.0.1", "https://10.1.2.3", "https://192.168.1.1", "https://169.254.169.254", "https://[::1]", "https://localhost", "http://example.com", "https://example.com:8443"] {
             var blocked = false
             do { try PublicWeb.validate(URL(string: address)!) } catch { blocked = true }
