@@ -1,0 +1,7 @@
+# type(scope): short description
+#
+# Types: build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test
+# Scope is optional. Keep the subject at most 100 characters.
+#
+# Explain the problem and resulting behavior. Add relevant verification.
+# Never include credentials or private data.

@@ -14,10 +14,11 @@ Focused fixes, accessibility improvements, compatibility reports, and useful wid
 You need a Mac, full Xcode 26 or later, XcodeGen, and Node.js 20 or later. Fork this repository on GitHub, then:
 
 ```sh
-brew install xcodegen node
+brew install xcodegen node gitleaks
 git clone https://github.com/YOUR_GITHUB_USERNAME/dashboard-2026.git
 cd dashboard-2026
 git switch -c your-change
+./scripts/setup-contributor.sh
 ./scripts/build.sh
 ```
 
@@ -48,6 +49,12 @@ This isolates Dashboard's saved layout. It does not isolate macOS preferences, K
 | `Examples/` | Portable widgets with public endpoints and no credentials |
 
 ## Before a pull request
+
+Use Conventional Commit subjects and the same format for the PR title, for example `fix(weather): preserve the selected city`. Allowed types are `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, and `test`; an optional lowercase scope and `!` breaking-change marker are supported. Keep the first line at most 100 characters.
+
+The setup script installs repository-local Git hooks and a commit template. Commits check staged whitespace, secrets, and the message. Pushes check secrets and Node tests, and reject deleting/rewriting `main` or replacing release tags. Hooks are optional to install and can be bypassed locally; GitHub's rules and required CI checks enforce the shared policy independently.
+
+Contributions to `main` require an approving code-owner review, dismissal of stale approvals after new changes, resolved review threads, verified signatures, and passing up-to-date CI. Use [GitHub's commit signing instructions](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits) to configure your own signing identity. Squash merging is enabled; merge and rebase merging are disabled. See [repository governance](docs/Governance.md) for the explicit owner bypass and protected release tags.
 
 ```sh
 node --test Tests/*.test.cjs

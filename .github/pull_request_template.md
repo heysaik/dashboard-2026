@@ -2,6 +2,9 @@
 
 Describe the problem and resulting behavior. Link the relevant issue, if any.
 
+Use a title such as `fix(weather): preserve the selected city`. An owner review,
+resolved conversations, and all required checks are needed before merging.
+
 ## Verification
 
 - [ ] Ran the relevant tests and described the results below.
